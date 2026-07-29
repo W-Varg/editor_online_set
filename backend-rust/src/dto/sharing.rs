@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -6,7 +7,7 @@ pub struct ShareRequest {
     pub user_id: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ShareResponse {
     pub id: String,
     pub document_id: String,
@@ -18,7 +19,7 @@ pub struct ShareResponse {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserSearchResult {
     pub id: String,
     pub username: String,

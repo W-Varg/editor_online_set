@@ -23,6 +23,18 @@ pub struct DocQuery {
     pub tab: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/documents",
+    params(
+        ("tab" = Option<String>, Query, description = "mine or shared")
+    ),
+    responses(
+        (status = 200, description = "Document list", body = [crate::dto::DocumentResponse]),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Documents"
+)]
 pub async fn list(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -39,6 +51,17 @@ pub async fn list(
     Json(docs).into_response()
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/documents",
+    request_body = CreateDocument,
+    responses(
+        (status = 201, description = "Document created", body = crate::dto::DocumentResponse),
+        (status = 400, description = "Invalid document request"),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Documents"
+)]
 pub async fn create(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -60,6 +83,18 @@ pub async fn create(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Document", body = crate::dto::DocumentResponse),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Documents"
+)]
 pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     match document_service::get_by_id(&state.db, &id) {
         Some(doc) => Json(doc).into_response(),
@@ -67,6 +102,19 @@ pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> 
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/documents/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Delete result", body = crate::dto::DeleteResponse),
+        (status = 401, description = "Token requerido"),
+        (status = 500, description = "Delete failed")
+    ),
+    tag = "Documents"
+)]
 pub async fn delete(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -79,6 +127,18 @@ pub async fn delete(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/download/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Raw document content"),
+        (status = 404, description = "Not found")
+    ),
+    tag = "Documents"
+)]
 pub async fn download(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let doc = match document_service::get_by_id(&state.db, &id) {
         Some(d) => d,
@@ -91,6 +151,18 @@ pub async fn download(State(state): State<Arc<AppState>>, Path(id): Path<String>
     ([(axum::http::header::CONTENT_TYPE, doc.mime.as_str())], content).into_response()
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}/content",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Raw document content"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Documents"
+)]
 pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let content = match document_repo::read_file(&state.db_path, &id) {
         Some(c) => c,
@@ -102,6 +174,19 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     ([(axum::http::header::CONTENT_TYPE, mime.as_str())], content).into_response()
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/documents/{id}/convert",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "PDF conversion result", body = ConvertResponse),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Documents"
+)]
 pub async fn convert_to_pdf(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -136,6 +221,18 @@ pub async fn convert_to_pdf(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}/pdf",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "PDF bytes"),
+        (status = 404, description = "PDF not found")
+    ),
+    tag = "Documents"
+)]
 pub async fn get_pdf(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let path = document_repo::pdf_path(&state.db_path, &id);
     if path.exists() {

@@ -30,6 +30,19 @@ async fn wopi_verify(
     Ok(claims)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/collabora/session/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Collabora session", body = crate::dto::CollaboraSession),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Collabora"
+)]
 pub async fn session(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -44,6 +57,20 @@ pub async fn session(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/wopi/files/{id}",
+    params(
+        ("id" = String, Path, description = "Document id"),
+        ("access_token" = Option<String>, Query, description = "WOPI access token")
+    ),
+    responses(
+        (status = 200, description = "WOPI file info", body = CheckFileInfo),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Collabora"
+)]
 pub async fn check_file_info(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
@@ -71,6 +98,20 @@ pub async fn check_file_info(
     }).into_response()
 }
 
+#[utoipa::path(
+    get,
+    path = "/wopi/files/{id}/contents",
+    params(
+        ("id" = String, Path, description = "Document id"),
+        ("access_token" = Option<String>, Query, description = "WOPI access token")
+    ),
+    responses(
+        (status = 200, description = "Document bytes"),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "Collabora"
+)]
 pub async fn get_file(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
@@ -87,6 +128,21 @@ pub async fn get_file(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/wopi/files/{id}",
+    params(
+        ("id" = String, Path, description = "Document id"),
+        ("access_token" = Option<String>, Query, description = "WOPI access token")
+    ),
+    responses(
+        (status = 200, description = "WOPI operation result"),
+        (status = 400, description = "Invalid WOPI request"),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 409, description = "Lock conflict")
+    ),
+    tag = "Collabora"
+)]
 pub async fn file_ops(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

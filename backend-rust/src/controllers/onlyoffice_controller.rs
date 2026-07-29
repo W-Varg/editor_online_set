@@ -17,6 +17,19 @@ fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Token requerido".to_string()).into_response())
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/onlyoffice/config/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "OnlyOffice configuration", body = crate::dto::OnlyOfficeConfig),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Document not found")
+    ),
+    tag = "OnlyOffice"
+)]
 pub async fn config(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -38,6 +51,17 @@ pub async fn config(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/callback/onlyoffice/{id}",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Callback accepted")
+    ),
+    tag = "OnlyOffice"
+)]
 pub async fn callback(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,

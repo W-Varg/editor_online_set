@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use serde::Deserialize;
+use utoipa::ToSchema;
 use crate::AppState;
 use crate::helpers::jwt;
 use crate::repos::user_repo;
@@ -22,11 +23,23 @@ pub struct SearchQuery {
     pub q: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct SharePayload {
     pub user_id: String,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/users/search",
+    params(
+        ("q" = String, Query, description = "Text to search")
+    ),
+    responses(
+        (status = 200, description = "Matching users", body = [crate::dto::UserSearchResult]),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Sharing"
+)]
 pub async fn search_users(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -36,6 +49,20 @@ pub async fn search_users(
     Json(user_repo::search(&state.db, &query.q, &user.sub)).into_response()
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/documents/{id}/shares",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    request_body = SharePayload,
+    responses(
+        (status = 201, description = "Share created", body = crate::dto::ShareResponse),
+        (status = 400, description = "Invalid share request"),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Sharing"
+)]
 pub async fn create(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -49,6 +76,18 @@ pub async fn create(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}/shares",
+    params(
+        ("id" = String, Path, description = "Document id")
+    ),
+    responses(
+        (status = 200, description = "Current shares", body = [crate::dto::ShareResponse]),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Sharing"
+)]
 pub async fn list(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -58,6 +97,20 @@ pub async fn list(
     Json(sharing_service::list(&state.db, &id)).into_response()
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/documents/{id}/shares/{user_id}",
+    params(
+        ("id" = String, Path, description = "Document id"),
+        ("user_id" = String, Path, description = "User id to unshare")
+    ),
+    responses(
+        (status = 200, description = "Share removed"),
+        (status = 404, description = "Share not found"),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Sharing"
+)]
 pub async fn remove(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

@@ -5,6 +5,7 @@ mod repos;
 mod services;
 mod controllers;
 mod helpers;
+mod openapi;
 pub mod templates;
 
 use std::collections::HashMap;
@@ -12,14 +13,18 @@ use std::sync::{Arc, Mutex};
 
 use axum::{
     http::HeaderMap,
-    response::Json,
+    response::{Json, Redirect},
     routing::{delete, get, post},
     Router,
 };
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing_subscriber::EnvFilter;
 
 use db::DbConn;
+use openapi::ApiDoc;
+use crate::dto::system::{HealthResponse, RootResponse};
 
 pub struct AppState {
     pub db: DbConn,
@@ -59,23 +64,40 @@ async fn discover_collab_prefix(base_url: &str) -> String {
 
 // ---- Root / Health / API Docs ----
 
-async fn root_handler(headers: HeaderMap) -> Json<serde_json::Value> {
+#[utoipa::path(
+    get,
+    path = "/",
+    responses(
+        (status = 200, description = "Service status", body = crate::dto::system::RootResponse)
+    )
+)]
+async fn root_handler(headers: HeaderMap) -> Json<RootResponse> {
     let host = headers.get("host").and_then(|v| v.to_str().ok()).unwrap_or("localhost");
-    Json(serde_json::json!({
-        "status": "ok",
-        "server": "editor-online-backend",
-        "version": env!("CARGO_PKG_VERSION"),
-        "host": host,
-        "timestamp": chrono::Utc::now().to_rfc3339()
-    }))
+    Json(RootResponse {
+        status: "ok".to_string(),
+        server: "editor-online-backend".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        host: host.to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+    })
 }
 
-async fn health_handler() -> Json<serde_json::Value> {
-    Json(serde_json::json!({"status": "healthy", "timestamp": chrono::Utc::now().to_rfc3339()}))
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "Service health", body = crate::dto::system::HealthResponse)
+    )
+)]
+async fn health_handler() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+    })
 }
 
-async fn api_docs_handler() -> axum::response::Html<&'static str> {
-    axum::response::Html(include_str!("swagger.html"))
+async fn api_docs_redirect() -> Redirect {
+    Redirect::temporary("/swagger-ui")
 }
 
 #[tokio::main]
@@ -105,31 +127,40 @@ async fn main() {
         wopi_locks: Arc::new(Mutex::new(HashMap::new())),
     };
 
+    let swagger_router: Router<Arc<AppState>> = SwaggerUi::new("/swagger-ui")
+        .url("/api-docs/openapi.json", ApiDoc::openapi())
+        .into();
+
     let app = Router::new()
         .route("/", get(root_handler))
         .route("/health", get(health_handler))
-        .route("/api", get(api_docs_handler))
+        .route("/api", get(api_docs_redirect))
         .route("/api/auth/login", post(controllers::auth_controller::login))
         .route("/api/documents", get(controllers::document_controller::list).post(controllers::document_controller::create))
-        .route("/api/documents/:id", get(controllers::document_controller::get).delete(controllers::document_controller::delete))
-        .route("/api/documents/:id/content", get(controllers::document_controller::content))
-        .route("/api/documents/:id/convert", post(controllers::document_controller::convert_to_pdf))
-        .route("/api/documents/:id/pdf", get(controllers::document_controller::get_pdf))
+        .route("/api/documents/{id}", get(controllers::document_controller::get).delete(controllers::document_controller::delete))
+        .route("/api/documents/{id}/content", get(controllers::document_controller::content))
+        .route("/api/documents/{id}/convert", post(controllers::document_controller::convert_to_pdf))
+        .route("/api/documents/{id}/pdf", get(controllers::document_controller::get_pdf))
         .route("/api/users/search", get(controllers::sharing_controller::search_users))
-        .route("/api/documents/:id/shares", get(controllers::sharing_controller::list).post(controllers::sharing_controller::create))
-        .route("/api/documents/:id/shares/:user_id", delete(controllers::sharing_controller::remove))
-        .route("/api/collabora/session/:id", get(controllers::collabora_controller::session))
-        .route("/wopi/files/:id", get(controllers::collabora_controller::check_file_info).post(controllers::collabora_controller::file_ops))
-        .route("/wopi/files/:id/contents", get(controllers::collabora_controller::get_file).post(controllers::collabora_controller::put_file))
-        .route("/api/onlyoffice/config/:id", get(controllers::onlyoffice_controller::config))
-        .route("/download/:id", get(controllers::document_controller::download))
-        .route("/callback/onlyoffice/:id", post(controllers::onlyoffice_controller::callback))
+        .route("/api/documents/{id}/shares", get(controllers::sharing_controller::list).post(controllers::sharing_controller::create))
+        .route("/api/documents/{id}/shares/{user_id}", delete(controllers::sharing_controller::remove))
+        .route("/api/collabora/session/{id}", get(controllers::collabora_controller::session))
+        .route("/wopi/files/{id}", get(controllers::collabora_controller::check_file_info).post(controllers::collabora_controller::file_ops))
+        .route("/wopi/files/{id}/contents", get(controllers::collabora_controller::get_file).post(controllers::collabora_controller::put_file))
+        .route("/api/onlyoffice/config/{id}", get(controllers::onlyoffice_controller::config))
+        .route("/download/{id}", get(controllers::document_controller::download))
+        .route("/callback/onlyoffice/{id}", post(controllers::onlyoffice_controller::callback))
+        .merge(swagger_router)
         .nest_service("/plugins", ServeDir::new("public"))
         .layer(CorsLayer::permissive())
         .with_state(Arc::new(state));
 
     let addr = format!("0.0.0.0:{}", port);
     tracing::info!("Backend starting on {}", addr);
+
+    println!("🚀 Servidor Rust + Axum escuchando en el puerto {port}");
+    println!("📘 Swagger UI disponible en http://localhost:{port}/api");
+
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

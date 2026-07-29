@@ -1,0 +1,58 @@
+use utoipa::OpenApi;
+use crate::{__path_health_handler, __path_root_handler};
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        root_handler,
+        health_handler,
+        crate::controllers::auth_controller::login,
+        crate::controllers::document_controller::list,
+        crate::controllers::document_controller::create,
+        crate::controllers::document_controller::get,
+        crate::controllers::document_controller::delete,
+        crate::controllers::document_controller::download,
+        crate::controllers::document_controller::content,
+        crate::controllers::document_controller::convert_to_pdf,
+        crate::controllers::document_controller::get_pdf,
+        crate::controllers::sharing_controller::search_users,
+        crate::controllers::sharing_controller::create,
+        crate::controllers::sharing_controller::list,
+        crate::controllers::sharing_controller::remove,
+        crate::controllers::collabora_controller::session,
+        crate::controllers::collabora_controller::check_file_info,
+        crate::controllers::collabora_controller::get_file,
+        crate::controllers::collabora_controller::file_ops,
+        crate::controllers::onlyoffice_controller::config,
+        crate::controllers::onlyoffice_controller::callback
+    ),
+    components(
+        schemas(
+            crate::dto::auth::LoginRequest,
+            crate::dto::auth::AuthResponse,
+            crate::dto::document::CreateDocument,
+            crate::dto::document::DocumentResponse,
+            crate::dto::document::DeleteResponse,
+            crate::dto::document::ConvertResponse,
+            crate::dto::collabora::CollaboraSession,
+            crate::dto::collabora::CheckFileInfo,
+            crate::dto::collabora::JwtClaims,
+            crate::dto::onlyoffice::OnlyOfficeConfig,
+            crate::dto::onlyoffice::OnlyOfficeDocument,
+            crate::dto::onlyoffice::OnlyOfficePermissions,
+            crate::dto::onlyoffice::OnlyOfficeEditorConfig,
+            crate::dto::onlyoffice::OnlyOfficeCustomization,
+            crate::dto::onlyoffice::OnlyOfficePlugins,
+            crate::dto::onlyoffice::OnlyOfficePluginItem,
+            crate::dto::onlyoffice::OnlyOfficeUser,
+            crate::controllers::sharing_controller::SharePayload,
+            crate::dto::sharing::ShareResponse,
+            crate::dto::sharing::UserSearchResult,
+            crate::dto::system::RootResponse,
+            crate::dto::system::HealthResponse,
+            crate::models::User,
+            crate::models::Document
+        )
+    )
+)]
+pub struct ApiDoc;
