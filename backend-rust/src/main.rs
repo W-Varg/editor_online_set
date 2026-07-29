@@ -587,10 +587,7 @@ async fn oo_config(
         Some(bytes) => bytes,
         None => return (StatusCode::NOT_FOUND, "Document content not found").into_response(),
     };
-    let backend_url = std::env::var("BACKEND_URL")
-        .ok()
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| public_service_url(&headers, 8091));
+    let backend_url = state.backend_url.clone();
 
     let document_type = match doc.ext.as_str() {
         "docx" | "doc" => "word".to_string(),

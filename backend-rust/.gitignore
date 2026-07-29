@@ -2,6 +2,7 @@
 /target/
 
 /data/*.bin
+/data/editor.db
 
 # Editor and OS files
 *.swp
