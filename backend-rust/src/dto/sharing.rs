@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ShareRequest {
     pub user_id: String,

@@ -1,6 +1,7 @@
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficeConfig {
     pub document: OnlyOfficeDocument,
     #[serde(rename = "documentType")]
@@ -11,7 +12,7 @@ pub struct OnlyOfficeConfig {
     pub token: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficeDocument {
     #[serde(rename = "fileType")]
     pub file_type: String,
@@ -21,7 +22,7 @@ pub struct OnlyOfficeDocument {
     pub permissions: OnlyOfficePermissions,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficePermissions {
     pub edit: bool,
     #[serde(rename = "comment")]
@@ -31,7 +32,7 @@ pub struct OnlyOfficePermissions {
     pub review: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficeEditorConfig {
     #[serde(rename = "callbackUrl")]
     pub callback_url: String,
@@ -45,7 +46,7 @@ pub struct OnlyOfficeEditorConfig {
     pub user: OnlyOfficeUser,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficeCustomization {
     pub autosave: bool,
     pub forcesave: bool,
@@ -53,19 +54,19 @@ pub struct OnlyOfficeCustomization {
     pub plugins_data: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficePlugins {
     pub autostart: bool,
     pub plugins: Vec<OnlyOfficePluginItem>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficePluginItem {
     pub id: String,
     pub src: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficeUser {
     pub id: String,
     pub name: String,

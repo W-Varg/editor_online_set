@@ -4,12 +4,12 @@ services:
     ports:
       - "8093:9980"
     environment:
-      - aliasgroup1=http://host.docker.internal:8091
-      - extra_params=--o:ssl.enable=false --o:net.frame_ancestors=http://localhost:*
+      - aliasgroup1=${COLLABORA_ALIASGROUP1:-http://host.docker.internal:8091}
+      - extra_params=--o:ssl.enable=false --o:net.frame_ancestors=${COLLABORA_FRAME_ANCESTORS:-http://localhost:* http://127.0.0.1:* http://host.docker.internal:*}
       - DONT_ENCRYPT=yes
       - username=admin
       - password=admin
-      - server_name=localhost:8093
+      - server_name=${COLLABORA_SERVER_NAME:-localhost:8093}
       - dictionaries=en es
     cap_add:
       - MKNOD

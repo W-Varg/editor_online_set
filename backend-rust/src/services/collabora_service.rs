@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use axum::http::HeaderMap;
 use crate::db::DbConn;
 use crate::dto::CollaboraSession;
@@ -8,7 +7,6 @@ const JWT_SECRET: &str = "secreto-jwt-editor-online-2024";
 
 pub fn create_session(
     db: &DbConn,
-    db_path: &PathBuf,
     headers: &HeaderMap,
     doc_id: &str,
     user_id: &str,

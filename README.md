@@ -134,13 +134,20 @@ Antes de levantar Collabora, define la lista de orígenes permitidos para el ifr
 export COLLABORA_FRAME_ANCESTORS='http://localhost:* http://127.0.0.1:* http://172.27.38.53:* http://host.docker.internal:*'
 ```
 
-Si prefieres usar un archivo `.env`, copia primero el ejemplo:
+Si prefieres usar un archivo `.env`, copia primero el perfil que te sirva:
 
 ```bash
-cp .env.example .env
+cp .env.local.example .env
 ```
 
 Luego ajusta `COLLABORA_FRAME_ANCESTORS` con los dominios o IPs que quieras permitir.
+Si vas a abrir el proyecto desde otra máquina en la red, usa el perfil de intranet:
+
+```bash
+cp .env.intranet.example .env
+```
+
+El backend y el compose leerán ese `.env` automáticamente.
 
 ### 2. Levantar el backend
 

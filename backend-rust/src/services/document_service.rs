@@ -67,7 +67,3 @@ pub fn delete(db: &DbConn, doc_id: &str, user_id: &str, db_path: &PathBuf) -> Re
         Ok(false)
     }
 }
-
-pub fn can_access(db: &DbConn, doc_id: &str, user_id: &str) -> bool {
-    document_repo::is_owner(db, doc_id, user_id) || document_repo::is_shared_with(db, doc_id, user_id)
-}

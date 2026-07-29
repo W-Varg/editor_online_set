@@ -1,6 +1,6 @@
 pub mod migrations;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use rusqlite::Connection;
 

@@ -1,17 +1,19 @@
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct TokenQuery {
     pub access_token: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CollaboraSession {
     pub iframe_url: String,
     pub access_token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct JwtClaims {
     pub sub: String,
     pub file_id: String,
@@ -19,7 +21,7 @@ pub struct JwtClaims {
     pub exp: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CheckFileInfo {
     #[serde(rename = "BaseFileName")]
     pub base_file_name: String,

@@ -64,8 +64,3 @@ pub fn seed(db: &DbConn) {
         ).unwrap_or_default();
     }
 }
-
-pub fn count(db: &DbConn) -> i64 {
-    let conn = db.lock().unwrap();
-    conn.query_row("SELECT COUNT(*) FROM users", [], |r| r.get(0)).unwrap_or(0)
-}

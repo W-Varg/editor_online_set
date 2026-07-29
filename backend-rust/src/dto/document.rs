@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateDocument {
     pub name: String,
     pub ext: String,
     pub editor: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DocumentResponse {
     pub id: String,
     pub name: String,
@@ -28,7 +29,13 @@ pub struct DocumentResponse {
     pub shared_by_name: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[allow(dead_code)]
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeleteResponse {
+    pub deleted: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ConvertResponse {
     pub pdf_id: String,
     pub pdf_url: String,

@@ -18,7 +18,7 @@ fn user_or_401(headers: &HeaderMap) -> Result<JwtClaims, Response> {
 }
 
 async fn wopi_verify(
-    state: &AppState,
+    _state: &AppState,
     query: &TokenQuery,
     doc_id: &str,
 ) -> Result<JwtClaims, Response> {
@@ -37,7 +37,7 @@ pub async fn session(
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
     match crate::services::collabora_service::create_session(
-        &state.db, &state.db_path, &headers, &id, &user.sub, &user.name, &state.collab_browser_prefix,
+        &state.db, &headers, &id, &user.sub, &user.name, &state.collab_browser_prefix,
     ) {
         Ok(session) => Json(session).into_response(),
         Err(e) => (StatusCode::NOT_FOUND, e).into_response(),
@@ -76,7 +76,7 @@ pub async fn get_file(
     Path(id): Path<String>,
     Query(query): Query<TokenQuery>,
 ) -> Response {
-    let claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    let _claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
     match document_repo::read_file(&state.db_path, &id) {
         Some(content) => {
             let mime = document_repo::get_by_id(&state.db, &id)
@@ -131,7 +131,7 @@ pub async fn put_file(
     Query(query): Query<TokenQuery>,
     body: Bytes,
 ) -> Response {
-    let claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    let _claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
     match wopi::wopi_override(&headers).as_deref() {
         Some("PUT") => {}
         Some(other) => return (StatusCode::BAD_REQUEST, format!("Unsupported WOPI operation: {}", other)).into_response(),

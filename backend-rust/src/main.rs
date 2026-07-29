@@ -11,13 +11,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    extract::State,
     http::HeaderMap,
-    response::{IntoResponse, Json},
+    response::Json,
     routing::{delete, get, post},
     Router,
 };
-use serde::Deserialize;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing_subscriber::EnvFilter;
 
