@@ -164,6 +164,7 @@ Si quieres usar otra IP o un proxy, puedes ajustar variables como:
 - `PORT`
 - `DATA_DIR`
 - `BACKEND_URL`
+- `PUBLIC_DIR` (opcional; por defecto usa `backend-rust/public`)
 - `PUBLIC_BACKEND_URL`
 - `COLLABORA_URL`
 - `PUBLIC_COLLABORA_URL`

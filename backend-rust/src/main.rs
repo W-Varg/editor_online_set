@@ -102,7 +102,9 @@ async fn api_docs_redirect() -> Redirect {
 
 #[tokio::main]
 async fn main() {
-    // Allow running from backend-rust/ while still reading the repo-level .env.
+    // Load backend-rust/.env independently of the directory used to start the process.
+    dotenvy::from_filename(format!("{}/.env", env!("CARGO_MANIFEST_DIR"))).ok();
+    // Keep support for a repository-level .env when running from backend-rust/.
     dotenvy::from_filename("../.env").ok();
     dotenvy::dotenv().ok();
 
@@ -114,6 +116,26 @@ async fn main() {
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "my-secret-key".to_string());
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://host.docker.internal:8091".to_string());
     let data_dir = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
+    let public_dir = std::env::var("PUBLIC_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("public"));
+    let public_dir = if public_dir.is_absolute() {
+        public_dir
+    } else {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(public_dir)
+    };
+
+    tracing::info!(
+        public_dir = %public_dir.display(),
+        exists = public_dir.is_dir(),
+        "Serving public files"
+    );
+    let plugins_dir = public_dir.join("plugins");
+    tracing::info!(
+        plugins_dir = %plugins_dir.display(),
+        exists = plugins_dir.is_dir(),
+        "Serving plugin files"
+    );
 
     let (db, db_path) = db::open_connection(&data_dir);
     db::migrations::run_migrations(&db.lock().unwrap());
@@ -158,7 +180,7 @@ async fn main() {
         .route("/download/{id}", get(controllers::document_controller::download))
         .route("/callback/onlyoffice/{id}", post(controllers::onlyoffice_controller::callback))
         .merge(swagger_router)
-        .nest_service("/plugins", ServeDir::new("public"))
+        .nest_service("/plugins", ServeDir::new(plugins_dir))
         .layer(CorsLayer::permissive())
         .with_state(Arc::new(state));
 
