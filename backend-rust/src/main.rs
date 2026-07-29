@@ -312,7 +312,8 @@ async fn collab_session(
         Some(d) => d,
         None => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
     };
-    let token = create_jwt(&state.jwt_secret, &user.sub, &user.name, &id, 28800);
+    let ttl_seconds = 86400; // 24 hours
+    let token = create_jwt(&state.jwt_secret, &user.sub, &user.name, &id, ttl_seconds);
     let wopi_src = format!("{}/wopi/files/{}", state.backend_url, id);
     let encoded_src = urlencoding(&wopi_src);
     let public_collab_url = std::env::var("PUBLIC_COLLABORA_URL")
@@ -325,8 +326,8 @@ async fn collab_session(
         format!("{}{}/cool.html", public_collab_url, state.collab_browser_prefix)
     };
     let iframe_url = format!(
-        "{}?WOPISrc={}&access_token={}&access_token_ttl=28800",
-        collab_path, encoded_src, token
+        "{}?WOPISrc={}&access_token={}&access_token_ttl={}",
+        collab_path, encoded_src, token, ttl_seconds * 1000
     );
     Json(CollaboraSession { iframe_url, access_token: token }).into_response()
 }
