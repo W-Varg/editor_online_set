@@ -1,6 +1,8 @@
 # Rust build artifacts
 /target/
 
+/data/*.bin
+
 # Editor and OS files
 *.swp
 *.swo
