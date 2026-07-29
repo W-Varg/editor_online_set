@@ -3,6 +3,7 @@
 
 /data/*.bin
 /data/editor.*
+/data/*
 
 # Editor and OS files
 *.swp

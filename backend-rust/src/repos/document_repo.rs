@@ -106,6 +106,24 @@ pub fn update_content(db: &DbConn, id: &str, size: u64) {
     ).unwrap_or_default();
 }
 
+pub fn finalize_pdf(db: &DbConn, id: &str, data_path: &PathBuf, pdf: &[u8]) -> Result<(), String> {
+    let pdf_path = pdf_path(data_path, id);
+    std::fs::write(&pdf_path, pdf).map_err(|e| format!("No se pudo guardar el PDF: {e}"))?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let conn = db.lock().unwrap();
+    conn.execute(
+        "UPDATE documents SET ext = 'pdf', mime = 'application/pdf', editor = 'none', size = ?1, status = 'final', updated_at = ?2 WHERE id = ?3",
+        params![pdf.len() as u64, now, id],
+    ).map_err(|e| format!("No se pudo actualizar el documento convertido: {e}"))?;
+
+    let source_path = file_path(data_path, id);
+    if source_path != pdf_path {
+        let _ = std::fs::remove_file(source_path);
+    }
+    Ok(())
+}
+
 pub fn physical_delete(db: &DbConn, id: &str, data_path: &PathBuf) {
     let conn = db.lock().unwrap();
     conn.execute("DELETE FROM document_shares WHERE document_id = ?1", params![id]).unwrap_or_default();

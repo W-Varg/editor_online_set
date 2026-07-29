@@ -6,12 +6,14 @@ const props = defineProps<{
   loading: boolean
   activeTab: 'mine' | 'shared'
   converting: string | null
+  previewing: string | null
 }>()
 
 const emit = defineEmits<{
   (e: 'switch-tab', tab: 'mine' | 'shared'): void
   (e: 'edit', doc: Document): void
   (e: 'convert', id: string): void
+  (e: 'preview', id: string): void
   (e: 'delete', doc: Document): void
 }>()
 
@@ -22,7 +24,14 @@ function formatSize(bytes: number): string {
 }
 
 function editorLabel(editor: string): string {
-  return editor === 'onlyoffice' ? 'ONLYOFFICE' : 'Collabora'
+  if (editor === 'onlyoffice') return 'ONLYOFFICE'
+  if (editor === 'collabora') return 'Collabora'
+  return 'PDF'
+}
+
+function documentTypeLabel(ext: string): string {
+  if (ext === 'pdf') return 'PDF'
+  return ext === 'docx' || ext === 'doc' ? 'WORD' : 'EXCEL'
 }
 
 function statusLabel(status: string): string {
@@ -73,7 +82,7 @@ function tabMessage(): string {
           </td>
           <td>
             <span class="badge" :class="doc.ext">
-              {{ doc.ext === 'docx' ? 'WORD' : 'EXCEL' }}
+              {{ documentTypeLabel(doc.ext) }}
             </span>
           </td>
           <td>
@@ -95,8 +104,21 @@ function tabMessage(): string {
           </td>
           <td class="date">{{ new Date(doc.updated_at).toLocaleString('es-BO') }}</td>
           <td class="actions">
-            <button class="btn btn-edit" @click="emit('edit', doc)">Editar</button>
             <button
+              v-if="doc.status !== 'final'"
+              class="btn btn-edit"
+              @click="emit('edit', doc)"
+            >Editar</button>
+            <button
+              v-if="doc.editor === 'onlyoffice' || doc.status === 'final'"
+              class="btn btn-preview"
+              :disabled="previewing === doc.id"
+              @click="emit('preview', doc.id)"
+            >
+              {{ previewing === doc.id ? 'Generando...' : 'Previsualizar' }}
+            </button>
+            <button
+              v-if="doc.editor === 'onlyoffice' && doc.status !== 'final'"
               class="btn btn-pdf"
               :disabled="converting === doc.id"
               @click="emit('convert', doc.id)"
@@ -192,6 +214,12 @@ th {
   color: #047857;
 }
 
+.badge.pdf,
+.badge.none {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .badge.final {
   background: #f0fdf4;
   color: #15803d;
@@ -223,6 +251,11 @@ th {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.8rem;
+}
+
+.btn-preview {
+  background: #475569;
+  color: white;
 }
 
 .btn-edit {

@@ -143,6 +143,7 @@ async fn main() {
         .route("/api/documents", get(controllers::document_controller::list).post(controllers::document_controller::create))
         .route("/api/documents/{id}", get(controllers::document_controller::get).delete(controllers::document_controller::delete))
         .route("/api/documents/{id}/content", get(controllers::document_controller::content))
+        .route("/api/documents/{id}/preview", get(controllers::document_controller::preview))
         .route("/api/documents/{id}/convert", post(controllers::document_controller::convert_to_pdf))
         .route("/api/documents/{id}/pdf", get(controllers::document_controller::get_pdf))
         .route("/api/users/search", get(controllers::sharing_controller::search_users))

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::AppState;
 use crate::dto::{CreateDocument, ConvertResponse};
 use crate::helpers::{config, jwt, url};
-use crate::services::document_service;
+use crate::services::{document_service, onlyoffice_converter};
 use crate::repos::document_repo;
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
@@ -190,32 +190,82 @@ pub async fn convert_to_pdf(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Response {
-    let _user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
     let doc = match document_service::get_by_id(&state.db, &id) {
         Some(d) => d,
         None => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
     };
 
-    if document_repo::pdf_path(&state.db_path, &id).exists() {
+    if doc.owner_id != user.sub {
+        return (StatusCode::FORBIDDEN, "Solo el propietario puede convertir el documento").into_response();
+    }
+    if doc.status == "final" {
         let pdf_url = format!("{}/api/documents/{}/pdf", url::public_service_url(&headers, 8091), id);
         return Json(ConvertResponse { pdf_id: format!("{}.pdf", id), pdf_url, status: "already_converted".to_string() }).into_response();
     }
+    if doc.editor != "onlyoffice" || !onlyoffice_converter::is_supported(&doc) {
+        return (StatusCode::BAD_REQUEST, "La conversión ONLYOFFICE solo está disponible para documentos compatibles de ONLYOFFICE").into_response();
+    }
 
-    let text = format!("Documento: {}\nTipo: {}\nEstado: {}\nCreado: {}", doc.name, doc.ext, doc.status, doc.created_at);
-    let pdf_bytes = crate::templates::generate_pdf(&format!("{}.{}", doc.name, doc.ext), &text);
+    let content = match document_repo::read_file(&state.db_path, &id) {
+        Some(content) => content,
+        None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
+    };
 
-    match std::fs::write(document_repo::pdf_path(&state.db_path, &id), &pdf_bytes) {
-        Ok(_) => {
-            let now = chrono::Utc::now().to_rfc3339();
-            let conn = state.db.lock().unwrap();
-            conn.execute(
-                "UPDATE documents SET status = 'final', updated_at = ?1 WHERE id = ?2",
-                rusqlite::params![now, id],
-            ).unwrap_or_default();
+    let pdf_bytes = match onlyoffice_converter::to_pdf(&doc, &content).await {
+        Ok(pdf) => pdf,
+        Err(error) => {
+            tracing::error!("Conversión ONLYOFFICE fallida para {}: {}", id, error);
+            return (StatusCode::BAD_GATEWAY, error).into_response();
+        }
+    };
+
+    match document_repo::finalize_pdf(&state.db, &id, &state.db_path, &pdf_bytes) {
+        Ok(()) => {
             let pdf_url = format!("{}/api/documents/{}/pdf", url::public_service_url(&headers, 8091), id);
             Json(ConvertResponse { pdf_id: format!("{}.pdf", id), pdf_url, status: "converted".to_string() }).into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error).into_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}/preview",
+    params(("id" = String, Path, description = "Document id")),
+    responses((status = 200, description = "Temporary PDF preview"), (status = 401, description = "Token requerido")),
+    tag = "Documents"
+)]
+pub async fn preview(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    let doc = match document_service::get_by_id(&state.db, &id) {
+        Some(doc) => doc,
+        None => return (StatusCode::NOT_FOUND, "Document not found").into_response(),
+    };
+    if !document_repo::is_owner(&state.db, &id, &user.sub) && !document_repo::is_shared_with(&state.db, &id, &user.sub) {
+        return (StatusCode::FORBIDDEN, "Sin acceso al documento").into_response();
+    }
+
+    if doc.status == "final" || doc.ext == "pdf" {
+        return get_pdf(State(state), headers, Path(id)).await;
+    }
+    if doc.editor != "onlyoffice" || !onlyoffice_converter::is_supported(&doc) {
+        return (StatusCode::BAD_REQUEST, "La previsualización ONLYOFFICE solo está disponible para documentos compatibles").into_response();
+    }
+    let content = match document_repo::read_file(&state.db_path, &id) {
+        Some(content) => content,
+        None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
+    };
+    match onlyoffice_converter::to_pdf(&doc, &content).await {
+        Ok(pdf) => pdf_response(pdf, true),
+        Err(error) => {
+            tracing::error!("Previsualización ONLYOFFICE fallida para {}: {}", id, error);
+            (StatusCode::BAD_GATEWAY, error).into_response()
+        }
     }
 }
 
@@ -231,7 +281,15 @@ pub async fn convert_to_pdf(
     ),
     tag = "Documents"
 )]
-pub async fn get_pdf(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+pub async fn get_pdf(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    if !document_repo::is_owner(&state.db, &id, &user.sub) && !document_repo::is_shared_with(&state.db, &id, &user.sub) {
+        return (StatusCode::FORBIDDEN, "Sin acceso al documento").into_response();
+    }
     let path = document_repo::pdf_path(&state.db_path, &id);
     if path.exists() {
         match std::fs::read(&path) {
@@ -241,4 +299,16 @@ pub async fn get_pdf(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     } else {
         (StatusCode::NOT_FOUND, "PDF not found. Convert the document first.").into_response()
     }
+}
+
+fn pdf_response(content: Vec<u8>, temporary: bool) -> Response {
+    let cache = if temporary { "no-store, max-age=0" } else { "private, max-age=60" };
+    (
+        [
+            (axum::http::header::CONTENT_TYPE, "application/pdf"),
+            (axum::http::header::CONTENT_DISPOSITION, "inline"),
+            (axum::http::header::CACHE_CONTROL, cache),
+        ],
+        content,
+    ).into_response()
 }

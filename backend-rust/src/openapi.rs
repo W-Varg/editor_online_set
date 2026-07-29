@@ -14,6 +14,7 @@ use crate::{__path_health_handler, __path_root_handler};
         crate::controllers::document_controller::download,
         crate::controllers::document_controller::content,
         crate::controllers::document_controller::convert_to_pdf,
+        crate::controllers::document_controller::preview,
         crate::controllers::document_controller::get_pdf,
         crate::controllers::sharing_controller::search_users,
         crate::controllers::sharing_controller::create,

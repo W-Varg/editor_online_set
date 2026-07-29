@@ -55,8 +55,22 @@ export async function convertToPdf(id: string) {
     method: 'POST',
     headers: headers(),
   })
-  if (!res.ok) throw new Error('Failed to convert document')
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'Failed to convert document')
+  }
   return res.json()
+}
+
+export async function previewDocument(id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/documents/${id}/preview`, {
+    headers: headers(),
+  })
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'No se pudo generar la previsualización')
+  }
+  return res.blob()
 }
 
 export async function getCollaboraSession(id: string) {

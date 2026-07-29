@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { listDocuments, createDocument, deleteDocument, convertToPdf } from '@/services/api'
@@ -17,9 +17,15 @@ const formExt = ref<'docx' | 'xlsx'>('docx')
 const formEditor = ref<'onlyoffice' | 'collabora'>('onlyoffice')
 const creating = ref(false)
 const converting = ref<string | null>(null)
+const previewing = ref<string | null>(null)
 const activeTab = ref<'mine' | 'shared'>('mine')
+const toast = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | undefined
 
 onMounted(() => loadDocs())
+onBeforeUnmount(() => {
+  if (toastTimer) clearTimeout(toastTimer)
+})
 
 async function loadDocs() {
   loading.value = true
@@ -76,13 +82,9 @@ async function handleConvert(id: string) {
   converting.value = id
   error.value = ''
   try {
-    const result = await convertToPdf(id)
-    if (result.pdf_url) {
-      window.open(result.pdf_url, '_blank')
-    } else {
-      error.value = 'Error en la conversión'
-    }
+    await convertToPdf(id)
     await loadDocs()
+    showToast('Documento convertido a PDF correctamente')
   } catch (e) {
     error.value = 'Error al convertir: ' + String(e)
   } finally {
@@ -90,10 +92,25 @@ async function handleConvert(id: string) {
   }
 }
 
+function showToast(message: string) {
+  toast.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toast.value = ''
+  }, 4000)
+}
+
 function editUrl(doc: Document): string {
   return doc.editor === 'onlyoffice'
     ? `/editor/onlyoffice/${doc.id}`
     : `/editor/collabora/${doc.id}`
+}
+
+function previewDocument(id: string) {
+  previewing.value = id
+  router.push(`/preview/${id}`).finally(() => {
+    previewing.value = null
+  })
 }
 </script>
 
@@ -131,15 +148,18 @@ function editUrl(doc: Document): string {
     </section>
 
     <div v-if="error" class="error-banner">{{ error }}</div>
+    <div v-if="toast" class="success-toast" role="status">{{ toast }}</div>
 
     <DocumentsTable
       :docs="docs"
       :loading="loading"
       :active-tab="activeTab"
       :converting="converting"
+      :previewing="previewing"
       @switch-tab="switchTab"
       @edit="router.push(editUrl($event))"
       @convert="handleConvert"
+      @preview="previewDocument"
       @delete="handleDelete"
     />
   </div>
@@ -221,5 +241,19 @@ function editUrl(doc: Document): string {
   border: 1px solid #fecaca;
   color: #b91c1c;
   border-radius: 8px;
+}
+
+.success-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 20;
+  padding: 0.85rem 1rem;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  font-size: 0.9rem;
 }
 </style>

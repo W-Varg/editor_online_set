@@ -27,6 +27,12 @@ const router = createRouter({
       component: () => import('@/views/EditorOnlyOffice.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/preview/:id',
+      name: 'document-preview',
+      component: () => import('@/views/DocumentPreview.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

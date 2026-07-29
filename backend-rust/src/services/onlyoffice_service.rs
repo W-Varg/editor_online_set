@@ -14,6 +14,9 @@ pub fn get_config(
     user_name: &str,
 ) -> Option<OnlyOfficeConfig> {
     let doc = super::document_service::get_by_id(db, doc_id)?;
+    if doc.status == "final" || doc.ext == "pdf" {
+        return None;
+    }
     let content = crate::repos::document_repo::read_file(db_path, doc_id)?;
     let backend_url = config::public_backend_url(8091);
     let browser_url = url::public_service_url(headers, 8091);
