@@ -128,6 +128,20 @@ Esto inicia:
 - `collabora/code:latest`
 - `onlyoffice/documentserver:latest`
 
+Antes de levantar Collabora, define la lista de orígenes permitidos para el iframe. Por ejemplo:
+
+```bash
+export COLLABORA_FRAME_ANCESTORS='http://localhost:* http://127.0.0.1:* http://172.27.38.53:* http://host.docker.internal:*'
+```
+
+Si prefieres usar un archivo `.env`, copia primero el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+Luego ajusta `COLLABORA_FRAME_ANCESTORS` con los dominios o IPs que quieras permitir.
+
 ### 2. Levantar el backend
 
 Desde la carpeta raíz del proyecto:
