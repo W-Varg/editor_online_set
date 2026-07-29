@@ -38,6 +38,42 @@ pub fn search(db: &DbConn, query: &str, exclude_id: &str) -> Vec<UserSearchResul
     }).unwrap().filter_map(|r| r.ok()).collect()
 }
 
+pub fn search_for_document(
+    db: &DbConn,
+    doc_id: &str,
+    query: &str,
+    exclude_id: &str,
+) -> (Vec<UserSearchResult>, Vec<UserSearchResult>) {
+    let conn = db.lock().unwrap();
+    let pattern = format!("%{}%", query.trim());
+    let mut stmt = conn.prepare(
+        "SELECT u.id, u.username, u.name, u.dni, u.cargo, s.user_id
+         FROM users u
+         LEFT JOIN document_shares s ON s.document_id = ?1 AND s.user_id = u.id
+         WHERE u.active = 1 AND u.id != ?2
+           AND (?3 = '%' OR u.name LIKE ?3 OR u.dni LIKE ?3 OR u.username LIKE ?3)
+         ORDER BY u.name COLLATE NOCASE
+         LIMIT 50"
+    ).unwrap();
+
+    let mut shared = Vec::new();
+    let mut found = Vec::new();
+    let rows = stmt.query_map(rusqlite::params![doc_id, exclude_id, pattern], |row| {
+        Ok((UserSearchResult {
+            id: row.get(0)?,
+            username: row.get(1)?,
+            name: row.get(2)?,
+            dni: row.get(3)?,
+            cargo: row.get(4)?,
+        }, row.get::<_, Option<String>>(5)?.is_some()))
+    }).unwrap();
+
+    for row in rows.flatten() {
+        if row.1 { shared.push(row.0); } else { found.push(row.0); }
+    }
+    (shared, found)
+}
+
 pub fn seed(db: &DbConn) {
     let now = chrono::Utc::now().to_rfc3339();
     let conn = db.lock().unwrap();

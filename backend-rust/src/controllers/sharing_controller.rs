@@ -9,7 +9,9 @@ use utoipa::ToSchema;
 use crate::AppState;
 use crate::helpers::{config, jwt};
 use crate::repos::user_repo;
+use crate::repos::document_repo;
 use crate::services::sharing_service;
+use crate::dto::{ShareSearchData, ShareSearchResponse, ShareSyncRequest};
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
     jwt::extract_user(headers, &config::jwt_secret())
@@ -18,7 +20,7 @@ fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
-    pub q: String,
+    pub q: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -44,7 +46,54 @@ pub async fn search_users(
     Query(query): Query<SearchQuery>,
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
-    Json(user_repo::search(&state.db, &query.q, &user.sub)).into_response()
+    Json(user_repo::search(&state.db, query.q.as_deref().unwrap_or(""), &user.sub)).into_response()
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/documents/{id}/shares/search",
+    params(("id" = String, Path, description = "Document id"), ("q" = Option<String>, Query, description = "DNI, name or username")),
+    responses((status = 200, description = "Share candidates", body = ShareSearchResponse), (status = 401, description = "Token requerido")),
+    tag = "Sharing"
+)]
+pub async fn search_document_users(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<SearchQuery>,
+) -> Response {
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    if !document_repo::is_owner(&state.db, &id, &user.sub) {
+        return (StatusCode::FORBIDDEN, "Solo el propietario puede administrar los permisos").into_response();
+    }
+    let (compartidos, encontrados) = user_repo::search_for_document(
+        &state.db,
+        &id,
+        query.q.as_deref().unwrap_or(""),
+        &user.sub,
+    );
+    Json(ShareSearchResponse { data: ShareSearchData { compartidos, encontrados } }).into_response()
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/documents/{id}/shares/sync",
+    params(("id" = String, Path, description = "Document id")),
+    request_body = ShareSyncRequest,
+    responses((status = 200, description = "Shares synchronized", body = [crate::dto::ShareResponse]), (status = 400, description = "Invalid share update")),
+    tag = "Sharing"
+)]
+pub async fn sync(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<ShareSyncRequest>,
+) -> Response {
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    match sharing_service::sync(&state.db, &id, &user.sub, &payload.add, &payload.remove) {
+        Ok(shares) => Json(shares).into_response(),
+        Err(error) => (StatusCode::BAD_REQUEST, error).into_response(),
+    }
 }
 
 #[utoipa::path(

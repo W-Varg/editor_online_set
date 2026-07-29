@@ -2,38 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Participantes</title>
-    <link rel="stylesheet" type="text/css" href="resources/css/style.css" />
+    <title>Compartir</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
     <script src="../plugin.js"></script>
   </head>
   <body>
-    <div class="panel-container">
-      <div class="panel-header">Participantes</div>
-
-      <div class="form-group">
-        <label for="participante-input">Texto del participante</label>
-        <input type="text" id="participante-input" placeholder="Escribe un texto..." />
-      </div>
-
-      <button id="btn-mostrar" class="btn-primary">Mostrar</button>
-    </div>
-
-    <!-- Dialog / Modal -->
-    <div id="dialog-overlay" class="dialog-overlay hidden">
-      <div class="dialog-box">
-        <div class="dialog-header">
-          <span>Resultado</span>
-          <button id="dialog-close" class="dialog-close">&times;</button>
-        </div>
-        <div class="dialog-body">
-          <p id="dialog-text"></p>
-        </div>
-        <div class="dialog-footer">
-          <button id="dialog-close-footer" class="btn-secondary">Cerrar</button>
-        </div>
-      </div>
-    </div>
-
+    <div id="plugin-root"></div>
     <script src="plugin_code.js"></script>
   </body>
 </html>

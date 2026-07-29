@@ -148,6 +148,8 @@ async fn main() {
         .route("/api/documents/{id}/pdf", get(controllers::document_controller::get_pdf))
         .route("/api/users/search", get(controllers::sharing_controller::search_users))
         .route("/api/documents/{id}/shares", get(controllers::sharing_controller::list).post(controllers::sharing_controller::create))
+        .route("/api/documents/{id}/shares/search", get(controllers::sharing_controller::search_document_users))
+        .route("/api/documents/{id}/shares/sync", axum::routing::put(controllers::sharing_controller::sync))
         .route("/api/documents/{id}/shares/{user_id}", delete(controllers::sharing_controller::remove))
         .route("/api/collabora/session/{id}", get(controllers::collabora_controller::session))
         .route("/wopi/files/{id}", get(controllers::collabora_controller::check_file_info).post(controllers::collabora_controller::file_ops))

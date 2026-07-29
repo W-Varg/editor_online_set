@@ -27,3 +27,20 @@ pub struct UserSearchResult {
     pub dni: Option<String>,
     pub cargo: Option<String>,
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ShareSyncRequest {
+    pub add: Vec<String>,
+    pub remove: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ShareSearchData {
+    pub compartidos: Vec<UserSearchResult>,
+    pub encontrados: Vec<UserSearchResult>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ShareSearchResponse {
+    pub data: ShareSearchData,
+}

@@ -43,3 +43,24 @@ pub fn list(db: &DbConn, doc_id: &str) -> Vec<ShareResponse> {
 pub fn remove(db: &DbConn, doc_id: &str, user_id: &str) -> Result<(), String> {
     document_repo::remove_share_entry(db, doc_id, user_id)
 }
+
+pub fn sync(db: &DbConn, doc_id: &str, actor_id: &str, add: &[String], remove: &[String]) -> Result<Vec<ShareResponse>, String> {
+    if !document_repo::is_owner(db, doc_id, actor_id) {
+        return Err("Solo el propietario puede actualizar los permisos".to_string());
+    }
+    if document_repo::get_by_id(db, doc_id).is_none() {
+        return Err("Documento no encontrado".to_string());
+    }
+
+    for user_id in remove {
+        if user_id != actor_id && document_repo::is_shared_with(db, doc_id, user_id) {
+            document_repo::remove_share_entry(db, doc_id, user_id)?;
+        }
+    }
+    for user_id in add {
+        if user_id != actor_id && !document_repo::is_shared_with(db, doc_id, user_id) {
+            share(db, doc_id, user_id, actor_id)?;
+        }
+    }
+    Ok(document_repo::list_shares(db, doc_id))
+}

@@ -29,6 +29,11 @@ async function handleLogin() {
 }
 
 const demoAccounts = ['user1', 'user2', 'user3', 'user4', 'user5']
+
+function fillDemo(user: string) {
+  username.value = user
+  password.value = 'Admin123@'
+}
 </script>
 
 <template>
@@ -69,10 +74,7 @@ const demoAccounts = ['user1', 'user2', 'user3', 'user4', 'user5']
             v-for="u in demoAccounts"
             :key="u"
             class="demo-user"
-            @click="
-              username = u
-              password = 'Admin123@'
-            "
+            @click="fillDemo(u)"
           >
             {{ u }}
           </span>

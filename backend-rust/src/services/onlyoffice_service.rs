@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use axum::http::HeaderMap;
-use sha2::{Digest, Sha256};
 use crate::db::DbConn;
 use crate::dto::OnlyOfficeConfig;
 use crate::helpers::{config, url};
+use axum::http::HeaderMap;
+use sha2::{Digest, Sha256};
+use std::path::PathBuf;
 
 pub fn get_config(
     db: &DbConn,
@@ -12,6 +12,7 @@ pub fn get_config(
     doc_id: &str,
     user_id: &str,
     user_name: &str,
+    api_token: &str,
 ) -> Option<OnlyOfficeConfig> {
     let doc = super::document_service::get_by_id(db, doc_id)?;
     if doc.status == "final" || doc.ext == "pdf" {
@@ -42,7 +43,11 @@ pub fn get_config(
             title: format!("{}.{}", doc.name, doc.ext),
             url: format!("{}/download/{}", backend_url, doc_id),
             permissions: crate::dto::OnlyOfficePermissions {
-                edit: true, comment: false, download: true, print: true, review: false,
+                edit: true,
+                comment: false,
+                download: true,
+                print: true,
+                review: false,
             },
         },
         editor_config: crate::dto::OnlyOfficeEditorConfig {
@@ -52,17 +57,24 @@ pub fn get_config(
             customization: crate::dto::OnlyOfficeCustomization {
                 autosave: true,
                 forcesave: true,
-                plugins_data: Some(vec![doc_id.to_string(), user_id.to_string(), browser_url.clone()]),
+                plugins_data: Some(vec![
+                    doc_id.to_string(),
+                    api_token.to_string(),
+                    browser_url.clone(),
+                ]),
             },
             plugins: Some(crate::dto::OnlyOfficePlugins {
                 autostart: false,
-                plugins: vec![crate::dto::OnlyOfficePluginItem {
-                    id: "restringida-share".to_string(),
-                    src: format!("{}/plugins/share/plugin.js", browser_url),
-                }, crate::dto::OnlyOfficePluginItem {
-                    id: "participantes".to_string(),
-                    src: format!("{}/plugins/participantes/plugin.js", browser_url),
-                }],
+                plugins: vec![
+                    crate::dto::OnlyOfficePluginItem {
+                        id: "compartir".to_string(),
+                        src: format!("{}/plugins/compartir/plugin.js", browser_url),
+                    },
+                    // crate::dto::OnlyOfficePluginItem {
+                    //     id: "participantes".to_string(),
+                    //     src: format!("{}/plugins/participantes/plugin.js", browser_url),
+                    // },
+                ],
             }),
             user: crate::dto::OnlyOfficeUser {
                 id: user_id.to_string(),

@@ -1,13 +1,13 @@
 {
-  "name": "Participantes",
-  "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-participantes01}",
+  "name": "Compartir",
+  "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}",
   "baseUrl": "index.html",
   "variations": [
     {
-      "description": "Plugin Participantes - muestra un panel lateral con un campo de texto",
+      "description": "Administra los usuarios que tienen acceso al documento",
       "url": "index.html",
-      "icons": ["resources/img/icon.png", "resources/img/icon@2x.png"],
-      "isViewer": false,
+      "icons": ["icon.png", "icon@2x.png"],
+      "isViewer": true,
       "EditorsSupport": ["word", "cell", "slide"],
       "isVisual": true,
       "isModal": false,

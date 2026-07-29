@@ -34,7 +34,12 @@ pub async fn config(
     Path(id): Path<String>,
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
-    match onlyoffice_service::get_config(&state.db, &state.db_path, &headers, &id, &user.sub, &user.name) {
+    let api_token = headers
+        .get("authorization")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .unwrap_or("");
+    match onlyoffice_service::get_config(&state.db, &state.db_path, &headers, &id, &user.sub, &user.name, api_token) {
         Some(mut config) => {
             let config_json = serde_json::to_value(&config).unwrap();
             let jwt_token = encode(
