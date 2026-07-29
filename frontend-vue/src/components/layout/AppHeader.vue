@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTheme } from '@/composables/useTheme'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { isDark, toggleTheme } = useTheme()
 
 function handleLogout() {
   auth.logout()
@@ -18,6 +20,9 @@ function handleLogout() {
     </div>
     <div class="nav-right">
       <span class="user-name">{{ auth.userName }}</span>
+      <button class="btn-theme" type="button" @click="toggleTheme">
+        {{ isDark ? 'Modo claro' : 'Modo oscuro' }}
+      </button>
       <button class="btn-logout" @click="handleLogout">Salir</button>
     </div>
   </header>
@@ -64,6 +69,18 @@ function handleLogout() {
   cursor: pointer;
   transition: background 0.15s;
 }
+
+.btn-theme {
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-theme:hover { background: #f1f5f9; }
 
 .btn-logout:hover {
   background: #e2e8f0;

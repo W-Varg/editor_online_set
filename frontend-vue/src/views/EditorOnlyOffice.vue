@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOnlyOfficeConfig } from '@/services/api'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +12,10 @@ const onlyOfficeBaseUrl = import.meta.env.VITE_ONLYOFFICE_URL || `${appProtocol}
 const loading = ref(true)
 const error = ref('')
 const containerId = 'editor-container'
+const { isDark } = useTheme()
+const editor = ref<any>(null)
+let editorConfig: any = null
+let editorTimer: ReturnType<typeof setTimeout> | undefined
 
 onMounted(async () => {
   const id = route.params.id as string
@@ -21,24 +26,44 @@ onMounted(async () => {
       await loadScript(`${onlyOfficeBaseUrl.replace(/\/$/, '')}/web-apps/apps/api/documents/api.js`)
     }
 
-    setTimeout(() => {
+    editorConfig = config
+    await mountEditor()
+  } catch (e) {
+    error.value = 'Error al cargar configuracion: ' + String(e)
+    loading.value = false
+  }
+})
+
+async function mountEditor() {
+  await nextTick()
+  editorConfig.editorConfig.customization.uiTheme = isDark.value ? 'theme-dark' : 'theme-light'
+  editorTimer = setTimeout(() => {
       const el = document.getElementById(containerId)
       if (!el) {
         error.value = 'Contenedor del editor no encontrado'
         return
       }
       try {
-        new (window as any).DocsAPI.DocEditor(containerId, config)
+        editor.value = new (window as any).DocsAPI.DocEditor(containerId, editorConfig)
         loading.value = false
       } catch (e) {
         error.value = 'Error al inicializar el editor: ' + String(e)
         loading.value = false
       }
     }, 100)
-  } catch (e) {
-    error.value = 'Error al cargar configuracion: ' + String(e)
-    loading.value = false
-  }
+}
+
+watch(isDark, async () => {
+  if (!editor.value || !editorConfig) return
+  editor.value.destroyEditor?.()
+  editor.value = null
+  loading.value = true
+  await mountEditor()
+})
+
+onBeforeUnmount(() => {
+  if (editorTimer) clearTimeout(editorTimer)
+  editor.value?.destroyEditor?.()
 })
 
 function loadScript(src: string): Promise<void> {

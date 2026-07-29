@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCollaboraSession, searchUsers, shareDocument, listShares, removeShare } from '@/services/api'
 import type { ShareInfo, UserSearchResult } from '@/services/types'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
-const iframeUrl = ref('')
 const loading = ref(true)
 const error = ref('')
 
@@ -16,13 +16,22 @@ const shareResults = ref<UserSearchResult[]>([])
 const shares = ref<ShareInfo[]>([])
 const selectedUserId = ref<string | null>(null)
 const shareError = ref('')
+const { isDark } = useTheme()
+const rawIframeUrl = ref('')
+
+const iframeUrl = computed(() => {
+  if (!rawIframeUrl.value) return ''
+  const url = new URL(rawIframeUrl.value, window.location.origin)
+  url.searchParams.set('ui_theme', isDark.value ? 'dark' : 'light')
+  return url.toString()
+})
 
 const docId = route.params.id as string
 
 onMounted(async () => {
   try {
     const session = await getCollaboraSession(docId)
-    iframeUrl.value = session.iframe_url
+    rawIframeUrl.value = session.iframe_url
   } catch (e) {
     error.value = String(e)
   } finally {
