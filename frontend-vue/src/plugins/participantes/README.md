@@ -44,6 +44,7 @@ Existen **2 formas**. La recomendada para desarrollo/pruebas es el **volumen mon
 ### Opción A — Montar el plugin como volumen (rápido, recomendado para probar)
 
 1. Copia la carpeta `participantes/` a tu proyecto, por ejemplo:
+
    ```
    /home/dev/Documents/restringida/dev_proyects/editor_online/frontend-vue/src/plugins/participantes
    ```
@@ -82,12 +83,13 @@ Existen **2 formas**. La recomendada para desarrollo/pruebas es el **volumen mon
      onlyoffice-documentserver:
        image: onlyoffice/documentserver
        ports:
-         - "8092:80"
+         - '8092:80'
        volumes:
          - /home/dev/Documents/restringida/dev_proyects/editor_online/frontend-vue/src/plugins/participantes:/var/www/onlyoffice/documentserver/web-apps/apps/api/documents/plugins/participantes
    ```
 
    Luego:
+
    ```bash
    docker-compose up -d --force-recreate onlyoffice-documentserver
    ```
@@ -174,7 +176,7 @@ Si el ícono no aparece:
 - El dialog **no usa `window.Asc.plugin.executeMethod`** ni interactúa con el documento — es un modal 100% HTML/CSS/JS dentro del propio iframe del plugin, tal como pediste (input → botón "Mostrar" → dialog con el texto capturado).
 - Si más adelante quieres que el texto se **inserte en el documento** en vez de (o además de) mostrarse en el dialog, se puede agregar con:
   ```js
-  window.Asc.plugin.executeMethod("PasteText", [texto]);
+  window.Asc.plugin.executeMethod('PasteText', [texto])
   ```
   dentro de `onMostrarClick`, pero no está incluido porque el requerimiento actual es solo mostrarlo en el dialog.
 
@@ -182,10 +184,10 @@ Si el ícono no aparece:
 
 ## 7. Personalización rápida
 
-| Quieres cambiar...                     | Dónde                                             |
-|-----------------------------------------|----------------------------------------------------|
-| Texto del panel / placeholder          | `index.html`                                      |
-| Colores / tamaño del panel y dialog    | `resources/css/style.css`                         |
-| Comportamiento (validaciones, eventos) | `plugin_code.js`                                  |
-| Ícono de la barra lateral               | `resources/img/icon.png` y `icon@2x.png`          |
-| Editores donde aparece (Word/Excel/PPT)| `config.json` → `EditorsSupport`                  |
+| Quieres cambiar...                      | Dónde                                    |
+| --------------------------------------- | ---------------------------------------- |
+| Texto del panel / placeholder           | `index.html`                             |
+| Colores / tamaño del panel y dialog     | `resources/css/style.css`                |
+| Comportamiento (validaciones, eventos)  | `plugin_code.js`                         |
+| Ícono de la barra lateral               | `resources/img/icon.png` y `icon@2x.png` |
+| Editores donde aparece (Word/Excel/PPT) | `config.json` → `EditorsSupport`         |

@@ -51,11 +51,15 @@ function tabMessage(): string {
       <button
         :class="['tab', { active: activeTab === 'mine' }]"
         @click="emit('switch-tab', 'mine')"
-      >Mis documentos</button>
+      >
+        Mis documentos
+      </button>
       <button
         :class="['tab', { active: activeTab === 'shared' }]"
         @click="emit('switch-tab', 'shared')"
-      >Compartidos conmigo</button>
+      >
+        Compartidos conmigo
+      </button>
     </div>
 
     <div v-if="loading" class="state-msg">Cargando...</div>
@@ -93,7 +97,7 @@ function tabMessage(): string {
           <td class="owner-cell">
             {{ doc.owner_name }}
             <span v-if="doc.shared_by_name" class="shared-by">
-              <br><small>por {{ doc.shared_by_name }}</small>
+              <br /><small>por {{ doc.shared_by_name }}</small>
             </span>
           </td>
           <td>{{ formatSize(doc.size) }}</td>
@@ -104,13 +108,13 @@ function tabMessage(): string {
           </td>
           <td class="date">{{ new Date(doc.updated_at).toLocaleString('es-BO') }}</td>
           <td class="actions">
+            <button v-if="doc.status !== 'final'" class="btn btn-edit" @click="emit('edit', doc)">
+              Editar
+            </button>
             <button
-              v-if="doc.status !== 'final'"
-              class="btn btn-edit"
-              @click="emit('edit', doc)"
-            >Editar</button>
-            <button
-              v-if="doc.editor === 'onlyoffice' || doc.editor === 'collabora' || doc.status === 'final'"
+              v-if="
+                doc.editor === 'onlyoffice' || doc.editor === 'collabora' || doc.status === 'final'
+              "
               class="btn btn-preview"
               :disabled="previewing === doc.id"
               @click="emit('preview', doc.id)"
@@ -118,7 +122,10 @@ function tabMessage(): string {
               {{ previewing === doc.id ? 'Generando...' : 'Previsualizar' }}
             </button>
             <button
-              v-if="(doc.editor === 'onlyoffice' || doc.editor === 'collabora') && doc.status !== 'final'"
+              v-if="
+                (doc.editor === 'onlyoffice' || doc.editor === 'collabora') &&
+                doc.status !== 'final'
+              "
               class="btn btn-pdf"
               :disabled="converting === doc.id"
               @click="emit('convert', doc.id)"
@@ -140,7 +147,7 @@ function tabMessage(): string {
   background: white;
   border-radius: 10px;
   padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .tabs {
@@ -175,7 +182,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   text-align: left;
   padding: 0.85rem 0.6rem;
   border-bottom: 1px solid #edf2f7;
@@ -231,7 +239,8 @@ th {
   color: #92400e;
 }
 
-.owner-cell, .date {
+.owner-cell,
+.date {
   color: #334155;
 }
 

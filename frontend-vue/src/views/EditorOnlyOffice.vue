@@ -38,19 +38,19 @@ async function mountEditor() {
   await nextTick()
   editorConfig.editorConfig.customization.uiTheme = isDark.value ? 'theme-dark' : 'theme-light'
   editorTimer = setTimeout(() => {
-      const el = document.getElementById(containerId)
-      if (!el) {
-        error.value = 'Contenedor del editor no encontrado'
-        return
-      }
-      try {
-        editor.value = new (window as any).DocsAPI.DocEditor(containerId, editorConfig)
-        loading.value = false
-      } catch (e) {
-        error.value = 'Error al inicializar el editor: ' + String(e)
-        loading.value = false
-      }
-    }, 100)
+    const el = document.getElementById(containerId)
+    if (!el) {
+      error.value = 'Contenedor del editor no encontrado'
+      return
+    }
+    try {
+      editor.value = new (window as any).DocsAPI.DocEditor(containerId, editorConfig)
+      loading.value = false
+    } catch (e) {
+      error.value = 'Error al inicializar el editor: ' + String(e)
+      loading.value = false
+    }
+  }, 100)
 }
 
 watch(isDark, async () => {
@@ -114,14 +114,18 @@ function loadScript(src: string): Promise<void> {
   color: #1a1a2e;
   transition: background 0.15s;
 }
-.btn-back:hover { background: #f1f5f9; }
+.btn-back:hover {
+  background: #f1f5f9;
+}
 .status {
   padding: 2rem;
   text-align: center;
   font-family: system-ui, sans-serif;
   color: #666;
 }
-.status.error { color: #c0392b; }
+.status.error {
+  color: #c0392b;
+}
 .editor-frame {
   width: 100%;
   flex: 1;

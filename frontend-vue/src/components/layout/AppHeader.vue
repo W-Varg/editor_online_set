@@ -80,7 +80,9 @@ function handleLogout() {
   cursor: pointer;
 }
 
-.btn-theme:hover { background: #f1f5f9; }
+.btn-theme:hover {
+  background: #f1f5f9;
+}
 
 .btn-logout:hover {
   background: #e2e8f0;

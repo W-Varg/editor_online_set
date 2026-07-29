@@ -1,23 +1,20 @@
 {
-    "name": "Participantes",
-    "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-participantes01}",
-    "baseUrl": "index.html",
-    "variations": [
-        {
-            "description": "Plugin Participantes - muestra un panel lateral con un campo de texto",
-            "url": "index.html",
-            "icons": [
-                "resources/img/icon.png",
-                "resources/img/icon@2x.png"
-            ],
-            "isViewer": false,
-            "EditorsSupport": ["word", "cell", "slide"],
-            "isVisual": true,
-            "isModal": false,
-            "isInsideMode": true,
-            "initDataType": "none",
-            "initData": "",
-            "buttons": []
-        }
-    ]
+  "name": "Participantes",
+  "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-participantes01}",
+  "baseUrl": "index.html",
+  "variations": [
+    {
+      "description": "Plugin Participantes - muestra un panel lateral con un campo de texto",
+      "url": "index.html",
+      "icons": ["resources/img/icon.png", "resources/img/icon@2x.png"],
+      "isViewer": false,
+      "EditorsSupport": ["word", "cell", "slide"],
+      "isVisual": true,
+      "isModal": false,
+      "isInsideMode": true,
+      "initDataType": "none",
+      "initData": "",
+      "buttons": []
+    }
+  ]
 }

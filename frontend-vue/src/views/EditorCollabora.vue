@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCollaboraSession, searchUsers, shareDocument, listShares, removeShare } from '@/services/api'
+import {
+  getCollaboraSession,
+  searchUsers,
+  shareDocument,
+  listShares,
+  removeShare,
+} from '@/services/api'
 import type { ShareInfo, UserSearchResult } from '@/services/types'
 import { useTheme } from '@/composables/useTheme'
 
@@ -142,11 +148,9 @@ async function handleRemoveShare(userId: string) {
                   <small>{{ u.dni || '' }} {{ u.cargo ? '| ' + u.cargo : '' }}</small>
                 </div>
               </div>
-              <button
-                class="btn-share-action"
-                :disabled="!selectedUserId"
-                @click="handleShare"
-              >Compartir</button>
+              <button class="btn-share-action" :disabled="!selectedUserId" @click="handleShare">
+                Compartir
+              </button>
             </div>
 
             <div class="share-divider"></div>
@@ -198,7 +202,9 @@ async function handleRemoveShare(userId: string) {
   color: #1a1a2e;
   transition: background 0.15s;
 }
-.btn-back:hover { background: #f1f5f9; }
+.btn-back:hover {
+  background: #f1f5f9;
+}
 .btn-share {
   padding: 0.4rem 0.85rem;
   background: #7c3aed;
@@ -210,14 +216,18 @@ async function handleRemoveShare(userId: string) {
   color: white;
   transition: opacity 0.15s;
 }
-.btn-share:hover { opacity: 0.85; }
+.btn-share:hover {
+  opacity: 0.85;
+}
 .status {
   padding: 2rem;
   text-align: center;
   font-family: system-ui, sans-serif;
   color: #666;
 }
-.status.error { color: #c0392b; }
+.status.error {
+  color: #c0392b;
+}
 .editor-frame {
   width: 100%;
   flex: 1;
@@ -229,7 +239,7 @@ async function handleRemoveShare(userId: string) {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,7 +252,7 @@ async function handleRemoveShare(userId: string) {
   max-width: 90vw;
   max-height: 85vh;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 .modal-header {
   display: flex;
@@ -251,7 +261,10 @@ async function handleRemoveShare(userId: string) {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e2e8f0;
 }
-.modal-header h3 { font-size: 1rem; margin: 0; }
+.modal-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
 .modal-close {
   background: none;
   border: none;
@@ -260,14 +273,22 @@ async function handleRemoveShare(userId: string) {
   color: #888;
   padding: 0.25rem;
 }
-.modal-close:hover { color: #333; }
+.modal-close:hover {
+  color: #333;
+}
 .modal-body {
   padding: 1.25rem;
   overflow-y: auto;
   max-height: calc(85vh - 60px);
 }
-.share-section { margin-bottom: 1rem; }
-.share-section h4 { font-size: 0.85rem; color: #555; margin-bottom: 0.5rem; }
+.share-section {
+  margin-bottom: 1rem;
+}
+.share-section h4 {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
 .share-input {
   width: 100%;
   padding: 0.6rem 0.75rem;
@@ -291,10 +312,19 @@ async function handleRemoveShare(userId: string) {
   flex-direction: column;
   gap: 0.1rem;
 }
-.user-item:last-child { border-bottom: none; }
-.user-item:hover { background: #f8fafc; }
-.user-item.selected { background: #dbeafe; }
-.user-item small { color: #888; font-size: 0.8rem; }
+.user-item:last-child {
+  border-bottom: none;
+}
+.user-item:hover {
+  background: #f8fafc;
+}
+.user-item.selected {
+  background: #dbeafe;
+}
+.user-item small {
+  color: #888;
+  font-size: 0.8rem;
+}
 .btn-share-action {
   width: 100%;
   padding: 0.6rem;
@@ -307,13 +337,20 @@ async function handleRemoveShare(userId: string) {
   font-weight: 600;
   cursor: pointer;
 }
-.btn-share-action:disabled { background: #93c5fd; cursor: not-allowed; }
+.btn-share-action:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
 .share-divider {
   height: 1px;
   background: #e2e8f0;
   margin: 1rem 0;
 }
-.no-shares { color: #888; font-size: 0.85rem; padding: 0.5rem 0; }
+.no-shares {
+  color: #888;
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
 .share-item {
   display: flex;
   justify-content: space-between;
@@ -321,9 +358,18 @@ async function handleRemoveShare(userId: string) {
   padding: 0.5rem 0;
   border-bottom: 1px solid #f1f5f9;
 }
-.share-item:last-child { border-bottom: none; }
-.share-info { display: flex; flex-direction: column; gap: 0.1rem; }
-.share-info small { color: #888; font-size: 0.8rem; }
+.share-item:last-child {
+  border-bottom: none;
+}
+.share-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.share-info small {
+  color: #888;
+  font-size: 0.8rem;
+}
 .btn-remove {
   background: #fee2e2;
   border: 1px solid #fca5a5;
@@ -333,7 +379,9 @@ async function handleRemoveShare(userId: string) {
   cursor: pointer;
   font-size: 0.8rem;
 }
-.btn-remove:hover { background: #fecaca; }
+.btn-remove:hover {
+  background: #fecaca;
+}
 .share-error {
   margin-top: 0.75rem;
   padding: 0.5rem;

@@ -1,67 +1,65 @@
-(function (window, undefined) {
+;(function (window, undefined) {
+  var inputEl, btnMostrar, dialogOverlay, dialogText, dialogClose, dialogCloseFooter
 
-    var inputEl, btnMostrar, dialogOverlay, dialogText, dialogClose, dialogCloseFooter;
+  function initUI() {
+    inputEl = document.getElementById('participante-input')
+    btnMostrar = document.getElementById('btn-mostrar')
+    dialogOverlay = document.getElementById('dialog-overlay')
+    dialogText = document.getElementById('dialog-text')
+    dialogClose = document.getElementById('dialog-close')
+    dialogCloseFooter = document.getElementById('dialog-close-footer')
 
-    function initUI() {
-        inputEl = document.getElementById("participante-input");
-        btnMostrar = document.getElementById("btn-mostrar");
-        dialogOverlay = document.getElementById("dialog-overlay");
-        dialogText = document.getElementById("dialog-text");
-        dialogClose = document.getElementById("dialog-close");
-        dialogCloseFooter = document.getElementById("dialog-close-footer");
+    btnMostrar.addEventListener('click', onMostrarClick)
+    dialogClose.addEventListener('click', closeDialog)
+    dialogCloseFooter.addEventListener('click', closeDialog)
 
-        btnMostrar.addEventListener("click", onMostrarClick);
-        dialogClose.addEventListener("click", closeDialog);
-        dialogCloseFooter.addEventListener("click", closeDialog);
+    // Cerrar tambien haciendo click fuera del cuadro
+    dialogOverlay.addEventListener('click', function (e) {
+      if (e.target === dialogOverlay) {
+        closeDialog()
+      }
+    })
 
-        // Cerrar tambien haciendo click fuera del cuadro
-        dialogOverlay.addEventListener("click", function (e) {
-            if (e.target === dialogOverlay) {
-                closeDialog();
-            }
-        });
+    // Permitir mostrar con Enter
+    inputEl.addEventListener('keyup', function (e) {
+      if (e.key === 'Enter') {
+        onMostrarClick()
+      }
+    })
+  }
 
-        // Permitir mostrar con Enter
-        inputEl.addEventListener("keyup", function (e) {
-            if (e.key === "Enter") {
-                onMostrarClick();
-            }
-        });
+  function onMostrarClick() {
+    var texto = inputEl.value || ''
+    texto = texto.trim()
+
+    if (texto.length === 0) {
+      texto = '(no se escribió ningún texto)'
     }
 
-    function onMostrarClick() {
-        var texto = inputEl.value || "";
-        texto = texto.trim();
+    dialogText.textContent = texto
+    openDialog()
+  }
 
-        if (texto.length === 0) {
-            texto = "(no se escribió ningún texto)";
-        }
+  function openDialog() {
+    dialogOverlay.classList.remove('hidden')
+  }
 
-        dialogText.textContent = texto;
-        openDialog();
-    }
+  function closeDialog() {
+    dialogOverlay.classList.add('hidden')
+  }
 
-    function openDialog() {
-        dialogOverlay.classList.remove("hidden");
-    }
+  // ------------------------------------------------------------------
+  // Integración con la API de plugins de OnlyOffice
+  // ------------------------------------------------------------------
+  window.Asc.plugin.init = function () {
+    initUI()
+  }
 
-    function closeDialog() {
-        dialogOverlay.classList.add("hidden");
-    }
+  // Se ejecuta cuando el plugin/panel se cierra o se oculta
+  window.Asc.plugin.button = function (id) {
+    this.executeCommand('close', '')
+  }
 
-    // ------------------------------------------------------------------
-    // Integración con la API de plugins de OnlyOffice
-    // ------------------------------------------------------------------
-    window.Asc.plugin.init = function () {
-        initUI();
-    };
-
-    // Se ejecuta cuando el plugin/panel se cierra o se oculta
-    window.Asc.plugin.button = function (id) {
-        this.executeCommand("close", "");
-    };
-
-    // Requerido por la API aunque no se use variación por botones
-    window.Asc.plugin.onExternalPluginMessage = function () {};
-
-})(window, undefined);
+  // Requerido por la API aunque no se use variación por botones
+  window.Asc.plugin.onExternalPluginMessage = function () {}
+})(window, undefined)

@@ -7,15 +7,30 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 </script>
 
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #app { min-height: 100%; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body,
+#app {
+  min-height: 100%;
+}
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: var(--app-background, #f5f7fa);
   color: var(--app-text, #1a1a2e);
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
-a { text-decoration: none; }
+a {
+  text-decoration: none;
+}
 
 :root {
   --app-background: #f5f7fa;
@@ -58,12 +73,24 @@ a { text-decoration: none; }
   border-color: var(--app-border) !important;
 }
 
-[data-theme='dark'] th { background: var(--app-surface-muted); color: var(--app-text); }
-[data-theme='dark'] td { border-color: var(--app-border-soft); }
+[data-theme='dark'] th {
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+}
+[data-theme='dark'] td {
+  border-color: var(--app-border-soft);
+}
 [data-theme='dark'] .user-name,
 [data-theme='dark'] .owner-cell,
 [data-theme='dark'] .date,
-[data-theme='dark'] .state-msg { color: var(--app-text-muted); }
-[data-theme='dark'] .btn-theme { color: var(--app-text); border-color: var(--app-border); }
-[data-theme='dark'] .btn-theme:hover { background: var(--app-surface-muted); }
+[data-theme='dark'] .state-msg {
+  color: var(--app-text-muted);
+}
+[data-theme='dark'] .btn-theme {
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+[data-theme='dark'] .btn-theme:hover {
+  background: var(--app-surface-muted);
+}
 </style>

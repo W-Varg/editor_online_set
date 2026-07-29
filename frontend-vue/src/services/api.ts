@@ -86,7 +86,9 @@ export async function getOnlyOfficeConfig(id: string) {
 }
 
 export async function searchUsers(query: string) {
-  const res = await fetch(`${API_BASE}/api/users/search?q=${encodeURIComponent(query)}`, { headers: headers() })
+  const res = await fetch(`${API_BASE}/api/users/search?q=${encodeURIComponent(query)}`, {
+    headers: headers(),
+  })
   if (!res.ok) throw new Error('Failed to search users')
   return res.json()
 }

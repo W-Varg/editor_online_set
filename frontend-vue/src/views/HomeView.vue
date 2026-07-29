@@ -178,7 +178,7 @@ function previewDocument(id: string) {
   background: white;
   border-radius: 10px;
   padding: 1.5rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .create-form h2 {
