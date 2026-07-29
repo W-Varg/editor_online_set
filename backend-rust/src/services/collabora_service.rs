@@ -1,13 +1,11 @@
 use axum::http::HeaderMap;
 use crate::db::DbConn;
 use crate::dto::CollaboraSession;
-use crate::helpers::{jwt, url};
-
-const JWT_SECRET: &str = "secreto-jwt-editor-online-2024";
+use crate::helpers::{config, jwt, url};
 
 pub fn create_session(
     db: &DbConn,
-    headers: &HeaderMap,
+    _headers: &HeaderMap,
     doc_id: &str,
     user_id: &str,
     user_name: &str,
@@ -17,10 +15,10 @@ pub fn create_session(
         .ok_or_else(|| "Documento no encontrado".to_string())?;
 
     let collabora_url = std::env::var("COLLABORA_URL").unwrap_or_else(|_| "http://localhost:8093".to_string());
-    let backend_url = url::public_service_url(headers, 8091);
+    let backend_url = config::public_backend_url(8091);
 
     let ttl_seconds = 86400;
-    let token = jwt::create(JWT_SECRET, user_id, user_name, doc_id, ttl_seconds);
+    let token = jwt::create(&config::jwt_secret(), user_id, user_name, doc_id, ttl_seconds);
     let wopi_src = format!("{}/wopi/files/{}", backend_url, doc_id);
     let encoded_src = url::urlencoding(&wopi_src);
 

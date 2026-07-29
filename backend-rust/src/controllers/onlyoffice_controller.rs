@@ -6,14 +6,12 @@ use axum::{
 };
 use jsonwebtoken::{encode, EncodingKey, Header};
 use crate::AppState;
-use crate::helpers::jwt;
+use crate::helpers::{config, jwt};
 use crate::repos::document_repo;
 use crate::services::onlyoffice_service;
 
-const JWT_SECRET: &str = "secreto-jwt-editor-online-2024";
-
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
-    jwt::extract_user(headers, JWT_SECRET)
+    jwt::extract_user(headers, &config::jwt_secret())
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Token requerido".to_string()).into_response())
 }
 
@@ -42,7 +40,7 @@ pub async fn config(
             let jwt_token = encode(
                 &Header::default(),
                 &config_json,
-                &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+                &EncodingKey::from_secret(config::jwt_secret().as_bytes()),
             ).unwrap_or_default();
             config.token = Some(jwt_token);
             Json(config).into_response()

@@ -4,13 +4,13 @@ services:
     ports:
       - "8093:9980"
     environment:
-      - aliasgroup1=${COLLABORA_ALIASGROUP1:-http://host.docker.internal:8091}
-      - extra_params=--o:ssl.enable=false --o:net.frame_ancestors=${COLLABORA_FRAME_ANCESTORS:-http://localhost:* http://127.0.0.1:* http://host.docker.internal:*}
-      - DONT_ENCRYPT=yes
-      - username=admin
-      - password=admin
-      - server_name=${COLLABORA_SERVER_NAME:-localhost:8093}
-      - dictionaries=en es
+      aliasgroup1: "${COLLABORA_ALIASGROUP1:-http://host.docker.internal:8091}"
+      extra_params: "${COLLABORA_EXTRA_PARAMS:---o:ssl.enable=false --o:net.content_security_policy=default-src 'self'; frame-ancestors http://localhost:* http://127.0.0.1:* http://host.docker.internal:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self';}"
+      DONT_ENCRYPT: "yes"
+      username: "${COLLABORA_USERNAME:-admin}"
+      password: "${COLLABORA_PASSWORD:-admin}"
+      server_name: "${COLLABORA_SERVER_NAME:-localhost:8093}"
+      dictionaries: "en es"
     cap_add:
       - MKNOD
     extra_hosts:
@@ -22,9 +22,9 @@ services:
     ports:
       - "8092:80"
     environment:
-      - JWT_ENABLED=true
-      - JWT_SECRET=my-secret-key
-      - WOPI_ENABLED=false
+      JWT_ENABLED: "true"
+      JWT_SECRET: "${JWT_SECRET:-my-secret-key}"
+      WOPI_ENABLED: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

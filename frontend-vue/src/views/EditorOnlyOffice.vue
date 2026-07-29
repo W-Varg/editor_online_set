@@ -7,6 +7,7 @@ const route = useRoute()
 const router = useRouter()
 const appHost = window.location.hostname || 'localhost'
 const appProtocol = window.location.protocol || 'http:'
+const onlyOfficeBaseUrl = import.meta.env.VITE_ONLYOFFICE_URL || `${appProtocol}//${appHost}:8092`
 const loading = ref(true)
 const error = ref('')
 const containerId = 'editor-container'
@@ -17,7 +18,7 @@ onMounted(async () => {
     const config = await getOnlyOfficeConfig(id)
 
     if (!(window as any).DocsAPI) {
-      await loadScript(`${appProtocol}//${appHost}:8092/web-apps/apps/api/documents/api.js`)
+      await loadScript(`${onlyOfficeBaseUrl.replace(/\/$/, '')}/web-apps/apps/api/documents/api.js`)
     }
 
     setTimeout(() => {

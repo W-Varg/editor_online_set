@@ -128,10 +128,12 @@ Esto inicia:
 - `collabora/code:latest`
 - `onlyoffice/documentserver:latest`
 
-Antes de levantar Collabora, define la lista de orígenes permitidos para el iframe. Por ejemplo:
+Antes de levantar Collabora, define el `extra_params` completo para el CSP y los orígenes permitidos. Por ejemplo:
 
 ```bash
-export COLLABORA_FRAME_ANCESTORS='http://localhost:* http://127.0.0.1:* http://172.27.38.53:* http://host.docker.internal:*'
+export JWT_SECRET='my-secret-key'
+export PUBLIC_BACKEND_URL='http://host.docker.internal:8091'
+export COLLABORA_EXTRA_PARAMS="--o:ssl.enable=false --o:net.content_security_policy=default-src 'self'; frame-ancestors http://localhost:* http://127.0.0.1:* http://172.27.38.53:* http://host.docker.internal:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self';"
 ```
 
 Si prefieres usar un archivo `.env`, copia primero el perfil que te sirva:
@@ -140,7 +142,6 @@ Si prefieres usar un archivo `.env`, copia primero el perfil que te sirva:
 cp .env.local.example .env
 ```
 
-Luego ajusta `COLLABORA_FRAME_ANCESTORS` con los dominios o IPs que quieras permitir.
 Si vas a abrir el proyecto desde otra máquina en la red, usa el perfil de intranet:
 
 ```bash
@@ -163,8 +164,10 @@ Si quieres usar otra IP o un proxy, puedes ajustar variables como:
 - `PORT`
 - `DATA_DIR`
 - `BACKEND_URL`
+- `PUBLIC_BACKEND_URL`
 - `COLLABORA_URL`
 - `PUBLIC_COLLABORA_URL`
+- `JWT_SECRET`
 
 ### 3. Levantar el frontend
 
@@ -173,6 +176,8 @@ cd frontend-vue
 yarn install
 yarn dev --host
 ```
+
+Si necesitas fijar la URL pública de ONLYOFFICE en el frontend, crea `frontend-vue/.env` o usa `frontend-vue/.env.example` con `VITE_ONLYOFFICE_URL`.
 
 Con `--host`, Vite expone la app en la red local.
 

@@ -7,14 +7,12 @@ use axum::{
 use serde::Deserialize;
 use crate::AppState;
 use crate::dto::{CreateDocument, ConvertResponse};
-use crate::helpers::{jwt, url};
+use crate::helpers::{config, jwt, url};
 use crate::services::document_service;
 use crate::repos::document_repo;
 
-const JWT_SECRET: &str = "secreto-jwt-editor-online-2024";
-
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
-    jwt::extract_user(headers, JWT_SECRET)
+    jwt::extract_user(headers, &config::jwt_secret())
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Token requerido".to_string()).into_response())
 }
 

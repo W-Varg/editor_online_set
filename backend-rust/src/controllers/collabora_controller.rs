@@ -7,13 +7,11 @@ use axum::{
 use axum::body::Bytes;
 use crate::AppState;
 use crate::dto::{CheckFileInfo, TokenQuery, JwtClaims};
-use crate::helpers::{jwt, wopi};
+use crate::helpers::{config, jwt, wopi};
 use crate::repos::document_repo;
 
-const JWT_SECRET: &str = "secreto-jwt-editor-online-2024";
-
 fn user_or_401(headers: &HeaderMap) -> Result<JwtClaims, Response> {
-    jwt::extract_user(headers, JWT_SECRET)
+    jwt::extract_user(headers, &config::jwt_secret())
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Token requerido".to_string()).into_response())
 }
 
@@ -23,7 +21,7 @@ async fn wopi_verify(
     doc_id: &str,
 ) -> Result<JwtClaims, Response> {
     let token = query.access_token.as_ref().ok_or_else(|| (StatusCode::UNAUTHORIZED, "No access token").into_response())?;
-    let claims = jwt::validate(JWT_SECRET, token).ok_or_else(|| (StatusCode::UNAUTHORIZED, "Invalid token").into_response())?;
+    let claims = jwt::validate(&config::jwt_secret(), token).ok_or_else(|| (StatusCode::UNAUTHORIZED, "Invalid token").into_response())?;
     if claims.file_id != doc_id {
         return Err((StatusCode::FORBIDDEN, "Token/file mismatch").into_response());
     }

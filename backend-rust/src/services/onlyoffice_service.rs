@@ -3,7 +3,7 @@ use axum::http::HeaderMap;
 use sha2::{Digest, Sha256};
 use crate::db::DbConn;
 use crate::dto::OnlyOfficeConfig;
-use crate::helpers::url;
+use crate::helpers::{config, url};
 
 pub fn get_config(
     db: &DbConn,
@@ -15,7 +15,8 @@ pub fn get_config(
 ) -> Option<OnlyOfficeConfig> {
     let doc = super::document_service::get_by_id(db, doc_id)?;
     let content = crate::repos::document_repo::read_file(db_path, doc_id)?;
-    let backend_url = url::public_service_url(headers, 8091);
+    let backend_url = config::public_backend_url(8091);
+    let browser_url = url::public_service_url(headers, 8091);
 
     let document_type = match doc.ext.as_str() {
         "docx" | "doc" => "word",
@@ -48,13 +49,13 @@ pub fn get_config(
             customization: crate::dto::OnlyOfficeCustomization {
                 autosave: true,
                 forcesave: true,
-                plugins_data: Some(vec![doc_id.to_string(), user_id.to_string(), backend_url.clone()]),
+                plugins_data: Some(vec![doc_id.to_string(), user_id.to_string(), browser_url.clone()]),
             },
             plugins: Some(crate::dto::OnlyOfficePlugins {
                 autostart: false,
                 plugins: vec![crate::dto::OnlyOfficePluginItem {
                     id: "restringida-share".to_string(),
-                    src: format!("{}/plugins/share/plugin.js", backend_url),
+                    src: format!("{}/plugins/share/plugin.js", browser_url),
                 }],
             }),
             user: crate::dto::OnlyOfficeUser {

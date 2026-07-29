@@ -102,6 +102,10 @@ async fn api_docs_redirect() -> Redirect {
 
 #[tokio::main]
 async fn main() {
+    // Allow running from backend-rust/ while still reading the repo-level .env.
+    dotenvy::from_filename("../.env").ok();
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
         .init();
