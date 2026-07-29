@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getOnlyOfficeConfig } from '@/services/api'
 
 const route = useRoute()
+const router = useRouter()
 const appHost = window.location.hostname || 'localhost'
 const appProtocol = window.location.protocol || 'http:'
 const loading = ref(true)
@@ -15,12 +16,10 @@ onMounted(async () => {
   try {
     const config = await getOnlyOfficeConfig(id)
 
-    // Check if DocsAPI is available, load if not
     if (!(window as any).DocsAPI) {
       await loadScript(`${appProtocol}//${appHost}:8092/web-apps/apps/api/documents/api.js`)
     }
 
-    // Wait a tick for the DOM to render the container
     setTimeout(() => {
       const el = document.getElementById(containerId)
       if (!el) {
@@ -54,6 +53,9 @@ function loadScript(src: string): Promise<void> {
 
 <template>
   <div class="editor-onlyoffice">
+    <div class="toolbar">
+      <button class="btn-back" @click="router.push('/')">← Volver a documentos</button>
+    </div>
     <div v-if="loading" class="status">Cargando editor ONLYOFFICE...</div>
     <div v-if="error" class="status error">{{ error }}</div>
     <div :id="containerId" class="editor-frame" />
@@ -67,6 +69,26 @@ function loadScript(src: string): Promise<void> {
   display: flex;
   flex-direction: column;
 }
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.btn-back {
+  padding: 0.4rem 0.85rem;
+  background: white;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #1a1a2e;
+  transition: background 0.15s;
+}
+.btn-back:hover { background: #f1f5f9; }
 .status {
   padding: 2rem;
   text-align: center;
@@ -76,6 +98,6 @@ function loadScript(src: string): Promise<void> {
 .status.error { color: #c0392b; }
 .editor-frame {
   width: 100%;
-  height: 100%;
+  flex: 1;
 }
 </style>

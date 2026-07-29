@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { listDocuments, createDocument, deleteDocument, convertToPdf } from '@/services/api'
 import type { Document } from '@/services/types'
+
+const router = useRouter()
 
 const docs = ref<Document[]>([])
 const loading = ref(true)
@@ -178,7 +181,7 @@ function editUrl(doc: Document): string {
             </td>
             <td class="date">{{ new Date(doc.updated_at).toLocaleString('es-BO') }}</td>
             <td class="actions">
-              <a :href="editUrl(doc)" target="_blank" class="btn btn-edit">Editar</a>
+              <button class="btn btn-edit" @click="router.push(editUrl(doc))">Editar</button>
               <button
                 class="btn btn-pdf"
                 :disabled="converting === doc.id"
