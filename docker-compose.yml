@@ -1,0 +1,30 @@
+services:
+  collabora:
+    image: collabora/code:latest
+    ports:
+      - "8093:9980"
+    environment:
+      - aliasgroup1=http://host.docker.internal:8091
+      - extra_params=--o:ssl.enable=false --o:net.frame_ancestors=http://172.27.38.53:* http://localhost:* http://host.docker.internal:*
+      - DONT_ENCRYPT=yes
+      - username=admin
+      - password=admin
+      - server_name=172.27.38.53:8093
+      - dictionaries=en es
+    cap_add:
+      - MKNOD
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    ports:
+      - "8092:80"
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=my-secret-key
+      - WOPI_ENABLED=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

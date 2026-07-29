@@ -1,0 +1,13 @@
+# Rust build artifacts
+/target/
+
+# Editor and OS files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Cargo lock for libraries can be ignored; keep it if this is an application.
+# Remove this line if you want to version Cargo.lock.
+# Cargo.lock
