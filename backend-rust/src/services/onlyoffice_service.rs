@@ -56,6 +56,9 @@ pub fn get_config(
                 plugins: vec![crate::dto::OnlyOfficePluginItem {
                     id: "restringida-share".to_string(),
                     src: format!("{}/plugins/share/plugin.js", browser_url),
+                }, crate::dto::OnlyOfficePluginItem {
+                    id: "participantes".to_string(),
+                    src: format!("{}/plugins/participantes/plugin.js", browser_url),
                 }],
             }),
             user: crate::dto::OnlyOfficeUser {

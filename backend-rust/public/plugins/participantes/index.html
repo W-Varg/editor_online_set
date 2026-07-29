@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Participantes</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="plugin-shell">
+    <div class="section-title">Participantes</div>
+    <p class="helper-text">
+      Escribe un texto y presiona <strong>Mostrar</strong> para verlo en un dialogo.
+    </p>
+
+    <label class="field-label" for="participant-text">Texto</label>
+    <input
+      id="participant-text"
+      class="text-input"
+      type="text"
+      placeholder="Escribe aqui el texto a mostrar"
+      autocomplete="off"
+    >
+
+    <button id="show-btn" class="btn-action" type="button">Mostrar</button>
+
+    <div id="dialog-overlay" class="dialog-overlay" hidden>
+      <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div class="dialog-header">
+          <div id="dialog-title" class="dialog-title">Texto capturado</div>
+          <button id="dialog-close" class="dialog-close" type="button" aria-label="Cerrar dialogo">×</button>
+        </div>
+        <div id="dialog-body" class="dialog-body"></div>
+        <div class="dialog-footer">
+          <button id="dialog-ok" class="btn-secondary" type="button">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="plugin.js"></script>
+</body>
+</html>
