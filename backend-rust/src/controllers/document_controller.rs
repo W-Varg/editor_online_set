@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::AppState;
 use crate::dto::{CreateDocument, ConvertResponse};
 use crate::helpers::{config, jwt, url};
-use crate::services::{document_service, onlyoffice_converter};
+use crate::services::{collabora_converter, document_service, onlyoffice_converter};
 use crate::repos::document_repo;
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
@@ -203,8 +203,8 @@ pub async fn convert_to_pdf(
         let pdf_url = format!("{}/api/documents/{}/pdf", url::public_service_url(&headers, 8091), id);
         return Json(ConvertResponse { pdf_id: format!("{}.pdf", id), pdf_url, status: "already_converted".to_string() }).into_response();
     }
-    if doc.editor != "onlyoffice" || !onlyoffice_converter::is_supported(&doc) {
-        return (StatusCode::BAD_REQUEST, "La conversión ONLYOFFICE solo está disponible para documentos compatibles de ONLYOFFICE").into_response();
+    if !is_convertible(&doc) {
+        return (StatusCode::BAD_REQUEST, "La conversión solo está disponible para documentos Word o Excel compatibles").into_response();
     }
 
     let content = match document_repo::read_file(&state.db_path, &id) {
@@ -212,10 +212,10 @@ pub async fn convert_to_pdf(
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
 
-    let pdf_bytes = match onlyoffice_converter::to_pdf(&doc, &content).await {
+    let pdf_bytes = match convert_content_to_pdf(&doc, &content).await {
         Ok(pdf) => pdf,
         Err(error) => {
-            tracing::error!("Conversión ONLYOFFICE fallida para {}: {}", id, error);
+            tracing::error!("Conversión {} fallida para {}: {}", doc.editor, id, error);
             return (StatusCode::BAD_GATEWAY, error).into_response();
         }
     };
@@ -253,19 +253,35 @@ pub async fn preview(
     if doc.status == "final" || doc.ext == "pdf" {
         return get_pdf(State(state), headers, Path(id)).await;
     }
-    if doc.editor != "onlyoffice" || !onlyoffice_converter::is_supported(&doc) {
-        return (StatusCode::BAD_REQUEST, "La previsualización ONLYOFFICE solo está disponible para documentos compatibles").into_response();
+    if !is_convertible(&doc) {
+        return (StatusCode::BAD_REQUEST, "La previsualización solo está disponible para documentos Word o Excel compatibles").into_response();
     }
     let content = match document_repo::read_file(&state.db_path, &id) {
         Some(content) => content,
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
-    match onlyoffice_converter::to_pdf(&doc, &content).await {
+    match convert_content_to_pdf(&doc, &content).await {
         Ok(pdf) => pdf_response(pdf, true),
         Err(error) => {
-            tracing::error!("Previsualización ONLYOFFICE fallida para {}: {}", id, error);
+            tracing::error!("Previsualización {} fallida para {}: {}", doc.editor, id, error);
             (StatusCode::BAD_GATEWAY, error).into_response()
         }
+    }
+}
+
+fn is_convertible(doc: &crate::models::Document) -> bool {
+    match doc.editor.as_str() {
+        "onlyoffice" => onlyoffice_converter::is_supported(doc),
+        "collabora" => collabora_converter::is_supported(doc),
+        _ => false,
+    }
+}
+
+async fn convert_content_to_pdf(doc: &crate::models::Document, content: &[u8]) -> Result<Vec<u8>, String> {
+    match doc.editor.as_str() {
+        "onlyoffice" => onlyoffice_converter::to_pdf(doc, content).await,
+        "collabora" => collabora_converter::to_pdf(doc, content).await,
+        _ => Err("Editor no compatible para conversión".to_string()),
     }
 }
 

@@ -110,7 +110,7 @@ function tabMessage(): string {
               @click="emit('edit', doc)"
             >Editar</button>
             <button
-              v-if="doc.editor === 'onlyoffice' || doc.status === 'final'"
+              v-if="doc.editor === 'onlyoffice' || doc.editor === 'collabora' || doc.status === 'final'"
               class="btn btn-preview"
               :disabled="previewing === doc.id"
               @click="emit('preview', doc.id)"
@@ -118,7 +118,7 @@ function tabMessage(): string {
               {{ previewing === doc.id ? 'Generando...' : 'Previsualizar' }}
             </button>
             <button
-              v-if="doc.editor === 'onlyoffice' && doc.status !== 'final'"
+              v-if="(doc.editor === 'onlyoffice' || doc.editor === 'collabora') && doc.status !== 'final'"
               class="btn btn-pdf"
               :disabled="converting === doc.id"
               @click="emit('convert', doc.id)"

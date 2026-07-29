@@ -4,3 +4,4 @@ pub mod sharing_service;
 pub mod collabora_service;
 pub mod onlyoffice_service;
 pub mod onlyoffice_converter;
+pub mod collabora_converter;
