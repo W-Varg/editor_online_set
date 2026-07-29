@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { listDocuments, createDocument, deleteDocument, convertToPdf } from '@/services/api'
 import type { Document } from '@/services/types'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const docs = ref<Document[]>([])
 const loading = ref(true)
@@ -14,19 +16,25 @@ const formExt = ref<'docx' | 'xlsx'>('docx')
 const formEditor = ref<'onlyoffice' | 'collabora'>('onlyoffice')
 const creating = ref(false)
 const converting = ref<string | null>(null)
+const activeTab = ref<'mine' | 'shared'>('mine')
 
-onMounted(loadDocs)
+onMounted(() => loadDocs())
 
 async function loadDocs() {
   loading.value = true
   error.value = ''
   try {
-    docs.value = await listDocuments()
+    docs.value = await listDocuments(activeTab.value)
   } catch (e) {
     error.value = String(e)
   } finally {
     loading.value = false
   }
+}
+
+function switchTab(tab: 'mine' | 'shared') {
+  activeTab.value = tab
+  loadDocs()
 }
 
 async function handleCreate() {
@@ -40,7 +48,8 @@ async function handleCreate() {
       editor: formEditor.value,
     })
     formName.value = ''
-    await loadDocs()
+    if (activeTab.value === 'shared') switchTab('mine')
+    else await loadDocs()
   } catch (e) {
     error.value = 'Error al crear: ' + String(e)
   } finally {
@@ -49,7 +58,11 @@ async function handleCreate() {
 }
 
 async function handleDelete(id: string, name: string) {
-  if (!confirm(`Eliminar "${name}"?`)) return
+  const isOwner = docs.value.find(d => d.id === id)?.owner_id === auth.user?.id
+  const msg = isOwner
+    ? `Eliminar "${name}"?\nSe quitará tu acceso. Si otros usuarios tienen acceso, el documento se conservará para ellos.`
+    : `Quitar acceso a "${name}"?`
+  if (!confirm(msg)) return
   try {
     await deleteDocument(id)
     await loadDocs()
@@ -104,7 +117,6 @@ function editUrl(doc: Document): string {
       <p class="subtitle">Gestión de documentos colaborativos</p>
     </header>
 
-    <!-- Formulario de creación -->
     <section class="create-form">
       <h2>Nuevo documento</h2>
       <form @submit.prevent="handleCreate">
@@ -136,16 +148,23 @@ function editUrl(doc: Document): string {
       </form>
     </section>
 
-    <!-- Errores -->
     <div v-if="error" class="error-banner">{{ error }}</div>
 
-    <!-- Tabla de documentos -->
     <section class="doc-list">
-      <h2>Documentos</h2>
+      <div class="tabs">
+        <button
+          :class="['tab', { active: activeTab === 'mine' }]"
+          @click="switchTab('mine')"
+        >Mis documentos</button>
+        <button
+          :class="['tab', { active: activeTab === 'shared' }]"
+          @click="switchTab('shared')"
+        >Compartidos conmigo</button>
+      </div>
 
       <div v-if="loading" class="state-msg">Cargando...</div>
       <div v-else-if="docs.length === 0" class="state-msg">
-        No hay documentos. Cree uno usando el formulario de arriba.
+        {{ activeTab === 'mine' ? 'No hay documentos. Cree uno usando el formulario de arriba.' : 'No hay documentos compartidos con usted.' }}
       </div>
 
       <table v-else>
@@ -154,6 +173,7 @@ function editUrl(doc: Document): string {
             <th>Nombre</th>
             <th>Tipo</th>
             <th>Editor</th>
+            <th>Propietario</th>
             <th>Tamaño</th>
             <th>Estado</th>
             <th>Actualizado</th>
@@ -162,7 +182,10 @@ function editUrl(doc: Document): string {
         </thead>
         <tbody>
           <tr v-for="doc in docs" :key="doc.id">
-            <td class="doc-name">{{ doc.name }}.{{ doc.ext }}</td>
+            <td class="doc-name">
+              {{ doc.name }}.{{ doc.ext }}
+              <span v-if="doc.shared" class="badge shared-badge">Compartido</span>
+            </td>
             <td>
               <span class="badge" :class="doc.ext">
                 {{ doc.ext === 'docx' ? 'WORD' : 'EXCEL' }}
@@ -171,6 +194,12 @@ function editUrl(doc: Document): string {
             <td>
               <span class="badge" :class="doc.editor">
                 {{ editorLabel(doc.editor) }}
+              </span>
+            </td>
+            <td class="owner-cell">
+              {{ doc.owner_name }}
+              <span v-if="doc.shared_by_name" class="shared-by">
+                <br><small>por {{ doc.shared_by_name }}</small>
               </span>
             </td>
             <td>{{ formatSize(doc.size) }}</td>
@@ -187,10 +216,10 @@ function editUrl(doc: Document): string {
                 :disabled="converting === doc.id"
                 @click="handleConvert(doc.id)"
               >
-                {{ converting === doc.id ? 'Convirtiendo...' : 'Convertir a PDF' }}
+                {{ converting === doc.id ? 'Convirtiendo...' : 'PDF' }}
               </button>
               <button class="btn btn-delete" @click="handleDelete(doc.id, doc.name)">
-                Eliminar
+                {{ doc.shared ? 'Quitar acceso' : 'Eliminar' }}
               </button>
             </td>
           </tr>
@@ -215,7 +244,6 @@ header { margin-bottom: 2rem; }
 h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
 .subtitle { color: #666; font-size: 0.95rem; }
 
-/* Form */
 .create-form {
   background: white;
   border-radius: 10px;
@@ -242,20 +270,46 @@ h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
 }
 .field.action button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Error */
 .error-banner {
   background: #fef2f2; color: #dc2626;
   padding: 0.75rem 1rem; border-radius: 6px;
   margin-bottom: 1rem; font-size: 0.9rem;
 }
 
-/* Table */
 .doc-list { }
-.doc-list h2 { font-size: 1.1rem; margin-bottom: 1rem; }
 .state-msg { padding: 2rem; text-align: center; color: #888; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 0;
+  margin-bottom: 1rem;
+  background: white;
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: #f8fafc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+.tab:hover { background: #f1f5f9; }
+.tab.active {
+  background: white;
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
 table {
   width: 100%; border-collapse: collapse;
-  background: white; border-radius: 10px; overflow: hidden;
+  background: white; border-radius: 0 0 10px 10px; overflow: hidden;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 th, td { padding: 0.7rem 0.85rem; text-align: left; font-size: 0.875rem; }
@@ -263,9 +317,10 @@ th { background: #f8fafc; font-weight: 600; color: #475569; border-bottom: 2px s
 td { border-bottom: 1px solid #f1f5f9; }
 tr:last-child td { border-bottom: none; }
 .doc-name { font-weight: 500; }
+.owner-cell { font-size: 0.85rem; }
+.shared-by { color: #888; }
 .date { font-size: 0.8rem; color: #666; white-space: nowrap; }
 
-/* Badges */
 .badge {
   display: inline-block; padding: 0.15rem 0.55rem;
   border-radius: 4px; font-size: 0.75rem;
@@ -277,8 +332,8 @@ tr:last-child td { border-bottom: none; }
 .badge.collabora { background: #fff7ed; color: #9a3412; }
 .badge.draft { background: #f1f5f9; color: #475569; }
 .badge.final { background: #fef3c7; color: #92400e; }
+.shared-badge { background: #f3e8ff; color: #7c3aed; margin-left: 0.5rem; font-size: 0.65rem; }
 
-/* Actions */
 .actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .btn {
   padding: 0.35rem 0.7rem; border-radius: 5px;

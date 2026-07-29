@@ -9,6 +9,7 @@ pub struct Document {
     pub editor: String,
     pub size: u64,
     pub status: String,
+    pub owner_id: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -25,6 +26,8 @@ pub struct User {
     pub id: String,
     pub username: String,
     pub name: String,
+    pub dni: Option<String>,
+    pub cargo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,6 +87,8 @@ pub struct OnlyOfficeEditorConfig {
     pub mode: String,
     #[serde(rename = "customization")]
     pub customization: OnlyOfficeCustomization,
+    #[serde(rename = "plugins")]
+    pub plugins: Option<OnlyOfficePlugins>,
     #[serde(rename = "user")]
     pub user: OnlyOfficeUser,
 }
@@ -92,6 +97,20 @@ pub struct OnlyOfficeEditorConfig {
 pub struct OnlyOfficeCustomization {
     pub autosave: bool,
     pub forcesave: bool,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "pluginsData")]
+    pub plugins_data: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OnlyOfficePlugins {
+    pub autostart: bool,
+    pub plugins: Vec<OnlyOfficePluginItem>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OnlyOfficePluginItem {
+    pub id: String,
+    pub src: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -143,4 +162,58 @@ pub struct ConvertResponse {
     pub pdf_id: String,
     pub pdf_url: String,
     pub status: String,
+}
+
+// ---- Sharing ----
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentShare {
+    pub id: String,
+    pub document_id: String,
+    pub user_id: String,
+    pub shared_by: String,
+    pub permission: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DocumentResponse {
+    pub id: String,
+    pub name: String,
+    pub ext: String,
+    pub mime: String,
+    pub editor: String,
+    pub size: u64,
+    pub status: String,
+    pub owner_id: String,
+    pub owner_name: String,
+    pub created_at: String,
+    pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shared: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shared_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shared_by_name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ShareResponse {
+    pub id: String,
+    pub document_id: String,
+    pub user_id: String,
+    pub user_name: String,
+    pub shared_by: String,
+    pub shared_by_name: String,
+    pub permission: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserSearchResult {
+    pub id: String,
+    pub username: String,
+    pub name: String,
+    pub dni: Option<String>,
+    pub cargo: Option<String>,
 }

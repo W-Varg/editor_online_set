@@ -37,13 +37,13 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json, Response},
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use jsonwebtoken::{encode, decode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing_subscriber::EnvFilter;
 
 use models::*;
@@ -187,12 +187,20 @@ fn user_or_401(headers: &HeaderMap, secret: &str) -> Result<JwtClaims, Response>
 async fn list_docs(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Response {
-    let _user = match user_or_401(&headers, &state.jwt_secret) {
+    let user = match user_or_401(&headers, &state.jwt_secret) {
         Ok(u) => u,
         Err(e) => return e,
     };
-    Json(state.storage.list_documents()).into_response()
+    let tab = query.get("tab").map(|s| s.as_str()).unwrap_or("mine");
+    let docs: Vec<serde_json::Value> = match tab {
+        "shared" => state.storage.list_shared_documents(&user.sub)
+            .into_iter().map(|d| serde_json::to_value(d).unwrap()).collect(),
+        _ => state.storage.list_my_documents(&user.sub)
+            .into_iter().map(|d| serde_json::to_value(d).unwrap()).collect(),
+    };
+    Json(docs).into_response()
 }
 
 async fn create_doc(
@@ -200,12 +208,27 @@ async fn create_doc(
     headers: HeaderMap,
     Json(payload): Json<CreateDocument>,
 ) -> Response {
-    let _user = match user_or_401(&headers, &state.jwt_secret) {
+    let user = match user_or_401(&headers, &state.jwt_secret) {
         Ok(u) => u,
         Err(e) => return e,
     };
-    match state.storage.create_document(&payload.name, &payload.ext, &payload.editor) {
-        Ok(doc) => (StatusCode::CREATED, Json(doc)).into_response(),
+    match state.storage.create_document(&payload.name, &payload.ext, &payload.editor, &user.sub) {
+        Ok(doc) => {
+            let resp = serde_json::json!({
+                "id": doc.id,
+                "name": doc.name,
+                "ext": doc.ext,
+                "mime": doc.mime,
+                "editor": doc.editor,
+                "size": doc.size,
+                "status": doc.status,
+                "owner_id": doc.owner_id,
+                "owner_name": user.name,
+                "created_at": doc.created_at,
+                "updated_at": doc.updated_at,
+            });
+            (StatusCode::CREATED, Json(resp)).into_response()
+        }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
     }
 }
@@ -222,12 +245,12 @@ async fn delete_doc(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Response {
-    let _user = match user_or_401(&headers, &state.jwt_secret) {
+    let user = match user_or_401(&headers, &state.jwt_secret) {
         Ok(u) => u,
         Err(e) => return e,
     };
-    match state.storage.delete_document(&id) {
-        Ok(_) => Json(serde_json::json!({"deleted": true})).into_response(),
+    match state.storage.delete_document(&id, &user.sub) {
+        Ok(deleted) => Json(serde_json::json!({"deleted": deleted})).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }
@@ -616,7 +639,18 @@ async fn oo_config(
             callback_url: format!("{}/callback/onlyoffice/{}", backend_url, id),
             lang: "es-ES".to_string(),
             mode: "edit".to_string(),
-            customization: OnlyOfficeCustomization { autosave: true, forcesave: true },
+            customization: OnlyOfficeCustomization {
+                autosave: true,
+                forcesave: true,
+                plugins_data: Some(vec![id.clone(), user.sub.clone(), backend_url.clone()]),
+            },
+            plugins: Some(OnlyOfficePlugins {
+                autostart: false,
+                plugins: vec![OnlyOfficePluginItem {
+                    id: "restringida-share".to_string(),
+                    src: format!("{}/plugins/share/plugin.js", backend_url),
+                }],
+            }),
             user: OnlyOfficeUser { id: user.sub, name: user.name },
         },
         token: None,
@@ -630,6 +664,97 @@ async fn oo_config(
     ).unwrap_or_default();
 
     Json(OnlyOfficeConfig { token: Some(jwt_token), ..config }).into_response()
+}
+
+// ---- Sharing & User Search ----
+
+#[derive(Deserialize)]
+struct UserSearchQuery {
+    q: String,
+}
+
+async fn user_search(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<UserSearchQuery>,
+) -> Response {
+    let user = match user_or_401(&headers, &state.jwt_secret) {
+        Ok(u) => u,
+        Err(e) => return e,
+    };
+    Json(state.storage.search_users(&query.q, &user.sub)).into_response()
+}
+
+#[derive(Deserialize)]
+struct ShareDocPayload {
+    user_id: String,
+}
+
+async fn create_share(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(payload): Json<ShareDocPayload>,
+) -> Response {
+    let user = match user_or_401(&headers, &state.jwt_secret) {
+        Ok(u) => u,
+        Err(e) => return e,
+    };
+    match state.storage.share_document(&id, &payload.user_id, &user.sub) {
+        Ok(share) => (StatusCode::CREATED, Json(share)).into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
+}
+
+async fn list_shares(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let _user = match user_or_401(&headers, &state.jwt_secret) {
+        Ok(u) => u,
+        Err(e) => return e,
+    };
+    Json(state.storage.get_shares(&id)).into_response()
+}
+
+async fn remove_share(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path((id, user_id)): Path<(String, String)>,
+) -> Response {
+    let _user = match user_or_401(&headers, &state.jwt_secret) {
+        Ok(u) => u,
+        Err(e) => return e,
+    };
+    match state.storage.remove_share(&id, &user_id) {
+        Ok(_) => Json(serde_json::json!({"status": "ok"})).into_response(),
+        Err(e) => (StatusCode::NOT_FOUND, e).into_response(),
+    }
+}
+
+// ---- Root / Health / API Docs ----
+
+async fn root_handler(headers: HeaderMap) -> Json<serde_json::Value> {
+    let host = headers.get("host").and_then(|v| v.to_str().ok()).unwrap_or("localhost");
+    Json(serde_json::json!({
+        "status": "ok",
+        "server": "editor-online-backend",
+        "version": env!("CARGO_PKG_VERSION"),
+        "host": host,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
+async fn health_handler() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "healthy",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
+async fn api_docs_handler() -> axum::response::Html<&'static str> {
+    axum::response::Html(include_str!("swagger.html"))
 }
 
 #[tokio::main]
@@ -660,6 +785,9 @@ async fn main() {
     });
 
     let app = Router::new()
+        .route("/", get(root_handler))
+        .route("/health", get(health_handler))
+        .route("/api", get(api_docs_handler))
         .route("/api/auth/login", post(login))
         .route("/api/documents", get(list_docs).post(create_doc))
         .route("/api/documents/:id", get(get_doc).delete(delete_doc))
@@ -668,6 +796,10 @@ async fn main() {
         .route("/api/documents/:id/pdf", get(get_pdf))
         .route("/api/collabora/session/:id", get(collab_session))
         .route("/api/onlyoffice/config/:id", get(oo_config))
+        .route("/api/users/search", get(user_search))
+        .route("/api/documents/:id/shares", get(list_shares).post(create_share))
+        .route("/api/documents/:id/shares/:user_id", delete(remove_share))
+        .nest_service("/plugins", ServeDir::new("public"))
         .route("/wopi/files/:id", get(wopi_check_file_info).post(wopi_file_ops))
         .route("/wopi/files/:id/contents", get(wopi_get_file).post(wopi_put_file))
         .route("/download/:id", get(oo_download))

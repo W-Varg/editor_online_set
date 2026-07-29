@@ -19,8 +19,8 @@ export async function login(username: string, password: string) {
   return res.json()
 }
 
-export async function listDocuments() {
-  const res = await fetch(`${API_BASE}/api/documents`, { headers: headers() })
+export async function listDocuments(tab: string = 'mine') {
+  const res = await fetch(`${API_BASE}/api/documents?tab=${tab}`, { headers: headers() })
   if (!res.ok) throw new Error('Failed to fetch documents')
   return res.json()
 }
@@ -68,5 +68,39 @@ export async function getCollaboraSession(id: string) {
 export async function getOnlyOfficeConfig(id: string) {
   const res = await fetch(`${API_BASE}/api/onlyoffice/config/${id}`, { headers: headers() })
   if (!res.ok) throw new Error('Failed to get OnlyOffice config')
+  return res.json()
+}
+
+export async function searchUsers(query: string) {
+  const res = await fetch(`${API_BASE}/api/users/search?q=${encodeURIComponent(query)}`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to search users')
+  return res.json()
+}
+
+export async function shareDocument(docId: string, userId: string) {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}/shares`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ user_id: userId }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || 'Failed to share document')
+  }
+  return res.json()
+}
+
+export async function listShares(docId: string) {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}/shares`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to list shares')
+  return res.json()
+}
+
+export async function removeShare(docId: string, userId: string) {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}/shares/${userId}`, {
+    method: 'DELETE',
+    headers: headers(),
+  })
+  if (!res.ok) throw new Error('Failed to remove share')
   return res.json()
 }
