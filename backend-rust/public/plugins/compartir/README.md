@@ -82,7 +82,7 @@ El flujo es:
       "plugins": [
         {
           "id": "compartir",
-          "src": "http://<backend-publico>:8091/plugins/compartir/plugin.js"
+          "src": "http://localhost:8091/plugins/compartir/plugin.js"
         }
      ]
    }
