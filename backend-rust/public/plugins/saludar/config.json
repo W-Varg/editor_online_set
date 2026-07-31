@@ -1,20 +1,23 @@
 {
-  "name": "Compartir",
-  "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}",
+  "name": "Saludar",
+  "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}",
   "onlyofficeScheme": false,
   "variations": [
     {
-      "description": "Administra los usuarios que tienen acceso al documento",
+      "description": "Plugin de prueba",
       "url": "index.html",
-      "icons": ["icon.png", "icon@2x.png"],
+      "icons": [],
       "isViewer": true,
       "EditorsSupport": ["word", "cell", "slide"],
       "isVisual": true,
-      "isModal": false,
+      "isModal": true,
       "isInsideMode": true,
       "initDataType": "none",
       "initData": "",
-      "buttons": []
+      "buttons": [
+        { "text": "Cerrar", "primary": false }
+      ],
+      "size": [350, 200]
     }
   ]
 }

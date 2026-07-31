@@ -51,7 +51,7 @@ pub struct OnlyOfficeCustomization {
     pub autosave: bool,
     pub forcesave: bool,
     #[serde(skip_serializing_if = "Option::is_none", rename = "pluginsData")]
-    pub plugins_data: Option<Vec<String>>,
+    pub plugins_data: Option<Vec<Vec<String>>>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -64,6 +64,8 @@ pub struct OnlyOfficePlugins {
 pub struct OnlyOfficePluginItem {
     pub id: String,
     pub src: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

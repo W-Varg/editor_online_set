@@ -1,6 +1,10 @@
 ;(function (window, undefined) {
   'use strict'
 
+  window.Asc = window.Asc || {}
+  window.Asc.plugin = window.Asc.plugin || { tr_init: false, tr: function (c) { return c } }
+  window.Asc.plugin.guid = 'asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}'
+
   var state = {
     docId: '',
     token: '',
@@ -96,17 +100,17 @@
   }
 
   function search() {
-    var query = refs.search.value.trim()
-    if (!query) {
+    var searchQuery = refs.search.value.trim()
+    if (!searchQuery) {
       state.query = ''
       state.users = []
       render()
       return
     }
-    state.query = query
+    state.query = searchQuery
     state.loading = true
     render()
-    api('/api/documents/' + encodeURIComponent(state.docId) + '/shares/search?q=' + encodeURIComponent(query))
+    api('/api/documents/' + encodeURIComponent(state.docId) + '/shares/search?q=' + encodeURIComponent(searchQuery))
       .then(function (response) {
         var data = response && response.data ? response.data : {}
         mergeUsers(data.compartidos, data.encontrados)
@@ -185,8 +189,20 @@
   }
 
   function setup() {
-    root = document.getElementById('plugin-root') || document.body
-    root.innerHTML = ''
+    var container = document.getElementById('plugin-root')
+    if (!container) {
+      container = document.createElement('div')
+      container.id = 'plugin-root'
+      if (document.body) {
+        document.body.appendChild(container)
+      } else {
+        document.addEventListener('DOMContentLoaded', function () {
+          document.body.appendChild(container)
+        })
+      }
+    }
+    container.innerHTML = ''
+    root = container
     var panel = el('div', 'panel-container')
     panel.appendChild(el('div', 'panel-header', 'Compartir documento'))
     var searchBox = el('div', 'search-box')
@@ -242,9 +258,14 @@
     render()
   }
 
-  window.Asc.plugin.init = function () {
-    pluginData()
-    setup()
+  window.Asc.plugin.init = function (text) {
+    try {
+      pluginData()
+      setup()
+    } catch (e) {
+      var b = document.body
+      if (b) { b.innerHTML = '<div style="padding:16px;color:#b91c1c;"><strong>Error init:</strong> ' + (e.message || e) + '</div>' }
+    }
   }
 
   window.Asc.plugin.onThemeChanged = function (theme) {
@@ -254,5 +275,34 @@
 
   window.Asc.plugin.button = function () {
     this.executeCommand('close', '')
+  }
+
+  function autoInit() {
+    if (!window.Asc.plugin._initInternal) {
+      window.Asc.plugin._initInternal = true
+      window.parent.postMessage(JSON.stringify({
+        type: 'initialize',
+        guid: window.Asc.plugin.guid || 'asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}'
+      }), '*')
+    }
+  }
+
+  function onMessage(e) {
+    if (!window.Asc || !window.Asc.plugin) return
+    var d
+    try { d = JSON.parse(e.data) } catch (_) { return }
+    if (d && d.type === 'plugin_init' && d.data) {
+      eval(d.data)
+    }
+  }
+
+  if (window.addEventListener) {
+    window.addEventListener('message', onMessage, false)
+  }
+
+  if (document.readyState === 'complete') {
+    autoInit()
+  } else {
+    window.addEventListener('load', autoInit)
   }
 })(window, undefined)

@@ -58,22 +58,21 @@ pub fn get_config(
                 autosave: true,
                 forcesave: true,
                 plugins_data: Some(vec![
-                    doc_id.to_string(),
-                    api_token.to_string(),
-                    browser_url.clone(),
+                    vec![
+                        doc_id.to_string(),
+                        api_token.to_string(),
+                        browser_url.clone(),
+                    ],
                 ]),
             },
             plugins: Some(crate::dto::OnlyOfficePlugins {
                 autostart: false,
                 plugins: vec![
                     crate::dto::OnlyOfficePluginItem {
-                        id: "compartir".to_string(),
-                        src: format!("{}/plugins/compartir/plugin.js", browser_url),
+                        id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}".to_string(),
+                        src: "http://localhost:8092/sdkjs-plugins/saludar/config.json".to_string(),
+                        name: Some("Saludar".to_string()),
                     },
-                    // crate::dto::OnlyOfficePluginItem {
-                    //     id: "participantes".to_string(),
-                    //     src: format!("{}/plugins/participantes/plugin.js", browser_url),
-                    // },
                 ],
             }),
             user: crate::dto::OnlyOfficeUser {
