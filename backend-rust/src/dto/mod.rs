@@ -4,6 +4,7 @@ pub mod collabora;
 pub mod onlyoffice;
 pub mod sharing;
 pub mod system;
+pub mod tag;
 
 #[allow(unused_imports)]
 pub use auth::*;
@@ -17,3 +18,5 @@ pub use onlyoffice::*;
 pub use sharing::*;
 #[allow(unused_imports)]
 pub use system::*;
+#[allow(unused_imports)]
+pub use tag::*;

@@ -40,9 +40,9 @@ fn conversion_key(doc: &Document, content: &[u8]) -> String {
     format!("{}-{:x}", doc.id, hasher.finalize())
 }
 
-pub async fn to_pdf(doc: &Document, content: &[u8]) -> Result<Vec<u8>, String> {
+pub async fn to_pdf(doc: &Document, content: &[u8], source_url: Option<String>) -> Result<Vec<u8>, String> {
     let backend_url = config::public_backend_url(8091);
-    let source_url = format!("{}/download/{}", backend_url, doc.id);
+    let source_url = source_url.unwrap_or_else(|| format!("{}/download/{}", backend_url, doc.id));
     let request = json!({
         "async": false,
         "filetype": file_type(&doc.ext),

@@ -26,6 +26,15 @@ use db::DbConn;
 use openapi::ApiDoc;
 use crate::dto::system::{HealthResponse, RootResponse};
 
+/// Contenido de un documento con las etiquetas ya resueltas, registrado con un
+/// token de un solo uso para que el convertidor de ONLYOFFICE pueda descargarlo
+/// por URL (el converter no recibe bytes, fetchea `fileUrl`).
+pub(crate) struct PreviewSource {
+    content: Vec<u8>,
+    mime: String,
+    expires_at: std::time::Instant,
+}
+
 pub struct AppState {
     pub db: DbConn,
     pub db_path: std::path::PathBuf,
@@ -33,6 +42,7 @@ pub struct AppState {
     pub collab_browser_prefix: String,
     pub backend_url: String,
     pub wopi_locks: Arc<Mutex<HashMap<String, String>>>,
+    pub(crate) preview_sources: Arc<Mutex<HashMap<String, PreviewSource>>>,
 }
 
 async fn discover_collab_prefix(base_url: &str) -> String {
@@ -151,6 +161,7 @@ async fn main() {
         collab_browser_prefix,
         backend_url,
         wopi_locks: Arc::new(Mutex::new(HashMap::new())),
+        preview_sources: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let swagger_router: Router<Arc<AppState>> = SwaggerUi::new("/swagger-ui")
@@ -173,6 +184,8 @@ async fn main() {
         .route("/api/documents/{id}/shares/search", get(controllers::sharing_controller::search_document_users))
         .route("/api/documents/{id}/shares/sync", axum::routing::put(controllers::sharing_controller::sync))
         .route("/api/documents/{id}/shares/{user_id}", delete(controllers::sharing_controller::remove))
+        .route("/api/tags", get(controllers::tag_controller::list_tags))
+        .route("/api/preview-source/{token}", get(controllers::tag_controller::preview_source))
         .route("/api/collabora/session/{id}", get(controllers::collabora_controller::session))
         .route("/wopi/files/{id}", get(controllers::collabora_controller::check_file_info).post(controllers::collabora_controller::file_ops))
         .route("/wopi/files/{id}/contents", get(controllers::collabora_controller::get_file).post(controllers::collabora_controller::put_file))

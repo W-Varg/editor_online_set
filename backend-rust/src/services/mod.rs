@@ -5,3 +5,4 @@ pub mod collabora_service;
 pub mod onlyoffice_service;
 pub mod onlyoffice_converter;
 pub mod collabora_converter;
+pub mod tag_service;

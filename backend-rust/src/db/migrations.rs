@@ -72,4 +72,7 @@ pub fn run_migrations(conn: &Connection) {
         let now = chrono::Utc::now().to_rfc3339();
         let _ = conn.execute("UPDATE users SET updated_at = ?1", rusqlite::params![now]);
     }
+    if !user_cols.contains(&"email".to_string()) {
+        let _ = conn.execute_batch("ALTER TABLE users ADD COLUMN email TEXT;");
+    }
 }

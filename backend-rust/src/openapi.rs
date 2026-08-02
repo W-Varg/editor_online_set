@@ -27,7 +27,9 @@ use crate::{__path_health_handler, __path_root_handler};
         crate::controllers::collabora_controller::get_file,
         crate::controllers::collabora_controller::file_ops,
         crate::controllers::onlyoffice_controller::config,
-        crate::controllers::onlyoffice_controller::callback
+        crate::controllers::onlyoffice_controller::callback,
+        crate::controllers::tag_controller::list_tags,
+        crate::controllers::tag_controller::preview_source
     ),
     components(
         schemas(
@@ -47,6 +49,7 @@ use crate::{__path_health_handler, __path_root_handler};
             crate::dto::onlyoffice::OnlyOfficeCustomization,
             crate::dto::onlyoffice::OnlyOfficePlugins,
             crate::dto::onlyoffice::OnlyOfficeUser,
+            crate::dto::tag::TagDefinition,
             crate::controllers::sharing_controller::SharePayload,
             crate::dto::sharing::ShareResponse,
             crate::dto::sharing::UserSearchResult,

@@ -8,8 +8,8 @@ use serde::Deserialize;
 use crate::AppState;
 use crate::dto::{CreateDocument, ConvertResponse};
 use crate::helpers::{config, jwt, url};
-use crate::services::{collabora_converter, document_service, onlyoffice_converter};
-use crate::repos::document_repo;
+use crate::services::{collabora_converter, document_service, onlyoffice_converter, tag_service};
+use crate::repos::{document_repo, user_repo};
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
     jwt::extract_user(headers, &config::jwt_secret())
@@ -212,7 +212,7 @@ pub async fn convert_to_pdf(
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
 
-    let pdf_bytes = match convert_content_to_pdf(&doc, &content).await {
+    let pdf_bytes = match convert_content_to_pdf(&state, &doc, &content, &user.sub).await {
         Ok(pdf) => pdf,
         Err(error) => {
             tracing::error!("Conversión {} fallida para {}: {}", doc.editor, id, error);
@@ -260,7 +260,7 @@ pub async fn preview(
         Some(content) => content,
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
-    match convert_content_to_pdf(&doc, &content).await {
+    match convert_content_to_pdf(&state, &doc, &content, &user.sub).await {
         Ok(pdf) => pdf_response(pdf, true),
         Err(error) => {
             tracing::error!("Previsualización {} fallida para {}: {}", doc.editor, id, error);
@@ -277,10 +277,45 @@ fn is_convertible(doc: &crate::models::Document) -> bool {
     }
 }
 
-async fn convert_content_to_pdf(doc: &crate::models::Document, content: &[u8]) -> Result<Vec<u8>, String> {
+async fn convert_content_to_pdf(
+    state: &Arc<AppState>,
+    doc: &crate::models::Document,
+    content: &[u8],
+    user_id: &str,
+) -> Result<Vec<u8>, String> {
+    // Resuelve las etiquetas {{key}} con los datos del usuario que previsualiza.
+    let resolved = match user_repo::get_by_id(&state.db, user_id) {
+        Some(user) => tag_service::resolve(content, &user, &doc.ext),
+        None => None,
+    };
+    let (conversion_content, source_url) = match (&resolved, doc.editor.as_str()) {
+        // ONLYOFFICE fetchea el documento por URL (no recibe bytes): el contenido
+        // resuelto se registra con un token de un solo uso en /api/preview-source.
+        (Some(resolved), "onlyoffice") => {
+            let token = uuid::Uuid::new_v4().to_string();
+            let mime = doc.mime.clone();
+            let url = {
+                let mut store = state.preview_sources.lock().unwrap();
+                store.insert(
+                    token.clone(),
+                    crate::PreviewSource {
+                        content: resolved.clone(),
+                        mime,
+                        expires_at: std::time::Instant::now() + std::time::Duration::from_secs(60),
+                    },
+                );
+                format!("{}/api/preview-source/{}", config::public_backend_url(8091), token)
+            };
+            (resolved.clone(), Some(url))
+        }
+        // Collabora recibe los bytes directamente; solo cambia el contenido.
+        (Some(resolved), _) => (resolved.clone(), None),
+        (None, _) => (content.to_vec(), None),
+    };
+
     match doc.editor.as_str() {
-        "onlyoffice" => onlyoffice_converter::to_pdf(doc, content).await,
-        "collabora" => collabora_converter::to_pdf(doc, content).await,
+        "onlyoffice" => onlyoffice_converter::to_pdf(doc, &conversion_content, source_url).await,
+        "collabora" => collabora_converter::to_pdf(doc, &conversion_content).await,
         _ => Err("Editor no compatible para conversión".to_string()),
     }
 }

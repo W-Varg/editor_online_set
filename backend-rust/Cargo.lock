@@ -130,6 +130,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "jsonwebtoken",
+ "regex",
  "reqwest",
  "rusqlite",
  "serde",

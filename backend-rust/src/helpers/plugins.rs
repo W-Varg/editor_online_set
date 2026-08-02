@@ -71,6 +71,15 @@ fn build_compartir_options(ctx: &PluginContext) -> serde_json::Value {
     })
 }
 
+/// Genera las opciones para el plugin "Etiquetas": el JWT del usuario y la URL
+/// pública del backend para poder consultar `GET /api/tags`.
+fn build_etiquetas_options(ctx: &PluginContext) -> serde_json::Value {
+    serde_json::json!({
+        "token": ctx.token,
+        "backendUrl": ctx.backend_url,
+    })
+}
+
 /// Catálogo de plugins personalizados.
 ///
 /// Se mantiene en una sola constante para que el alta de plugins sea declarativa
@@ -104,6 +113,18 @@ pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
         autostart: false,
         requires_owner: true,
         options: Some(build_compartir_options),
+    },
+    // Plugin "Etiquetas": inserta etiquetas dinámicas ({{key}}) en el contenido.
+    // Vive en public/plugins/etiquetas/. El backend las resuelve al previsualizar
+    // o convertir a PDF, por lo que el plugin no requiere ser propietario.
+    CustomPlugin {
+        id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000003}",
+        name: "Etiquetas",
+        dir: "etiquetas",
+        editors: &["word", "cell"],
+        autostart: false,
+        requires_owner: false,
+        options: Some(build_etiquetas_options),
     },
 ];
 

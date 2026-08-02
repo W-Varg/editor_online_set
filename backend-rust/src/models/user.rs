@@ -8,4 +8,5 @@ pub struct User {
     pub name: String,
     pub dni: Option<String>,
     pub cargo: Option<String>,
+    pub email: Option<String>,
 }
