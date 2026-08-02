@@ -6,27 +6,30 @@
     SDK de plugins de ONLYOFFICE cargado desde el CDN oficial, igual que el resto
     de plugins servidos externamente por el backend. plugins.css aporta las clases
     de UI nativas (.form-control, .btn-text-default, .label, ...) para heredar la
-    apariencia del editor sin definir estilos propios.
+    apariencia del editor. Los estilos propios del layout viven en
+    resources/styles/style.css (cargado después del SDK), como hacen los plugins
+    de la comunidad.
   -->
   <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
   <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
   <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+  <link rel="stylesheet" href="resources/styles/style.css">
   <script type="text/javascript" src="plugin.js"></script>
 </head>
-<body class="body" style="margin:0;display:flex;flex-direction:column;height:100%;">
+<body class="body share-body">
   <!-- Panel lateral (isInsideMode): buscador + resultados + estado. -->
-  <div style="flex:1;padding:16px;overflow:auto;">
+  <div class="share-main">
     <label class="label" for="search-input">Buscar por DNI o nombre</label>
-    <div style="display:flex;margin-top:4px;">
-      <input id="search-input" class="form-control" type="search" placeholder="dni o nombre">
-      <div id="btn-buscar" class="btn-text-default" style="margin-left:8px;flex-shrink:0;">Buscar</div>
+    <div class="share-search">
+      <input id="search-input" class="form-control share-search-input" type="search" placeholder="dni o nombre" autocomplete="off">
+      <div id="btn-buscar" class="btn-text-default share-search-btn">Buscar</div>
     </div>
-    <div id="results" style="margin-top:12px;"></div>
-    <div id="status" style="margin-top:8px;font-size:12px;"></div>
+    <div id="results" class="share-list"></div>
+    <div id="status" class="share-status"></div>
   </div>
-  <div class="button_wrapper" style="padding:0 12px 12px;">
+  <div class="button_wrapper">
     <div id="btn-cerrar" class="btn-text-default">Cerrar</div>
-    <div id="btn-compartir" class="btn-text-default">Compartir</div>
+    <div id="btn-guardar" class="btn-text-default share-btn-right share-btn-primary">Guardar</div>
   </div>
 </body>
 </html>

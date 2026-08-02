@@ -35,18 +35,20 @@
     container.appendChild(el('div', '', '¿Confirma los siguientes cambios de acceso al documento?'))
 
     if (add.length) {
-      container.appendChild(el('div', '', ''))
-      container.appendChild(el('strong', '', 'Compartir con (' + add.length + '):'))
-      var ulAdd = el('ul', '', '')
+      var addSection = el('div', 'share-modal-section', '')
+      addSection.appendChild(el('strong', '', 'Compartir con (' + add.length + '):'))
+      var ulAdd = el('ul', 'share-modal-list', '')
       add.forEach(function (name) { ulAdd.appendChild(el('li', '', name)) })
-      container.appendChild(ulAdd)
+      addSection.appendChild(ulAdd)
+      container.appendChild(addSection)
     }
     if (remove.length) {
-      container.appendChild(el('div', '', ''))
-      container.appendChild(el('strong', '', 'Quitar acceso a (' + remove.length + '):'))
-      var ulRemove = el('ul', '', '')
+      var removeSection = el('div', 'share-modal-section', '')
+      removeSection.appendChild(el('strong', '', 'Quitar acceso a (' + remove.length + '):'))
+      var ulRemove = el('ul', 'share-modal-list', '')
       remove.forEach(function (name) { ulRemove.appendChild(el('li', '', name)) })
-      container.appendChild(ulRemove)
+      removeSection.appendChild(ulRemove)
+      container.appendChild(removeSection)
     }
   }
 

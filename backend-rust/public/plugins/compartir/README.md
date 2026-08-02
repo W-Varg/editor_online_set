@@ -72,13 +72,17 @@ compartir/
 ├── confirmar.html     ventana modal de confirmación
 ├── confirmar.js       lógica del modal (resumen + Aceptar/Rechazar)
 ├── resources/
+│   ├── styles/
+│   │   └── style.css  estilos propios del plugin (layout y apariencia)
 │   ├── light/         iconos para tema claro (100% a 200%)
 │   └── dark/          iconos para tema oscuro (100% a 200%)
 └── README.md
 ```
 
-No se usa `style.css` propio: el plugin reutiliza las clases nativas del SDK
-(`plugins.css`, `.form-control`, `.btn-text-default`, `.button_wrapper`).
+Los estilos propios se mantienen separados en `resources/styles/style.css`
+(cargado después del `plugins.css` del SDK) y usan clases (`share-row`,
+`share-search`, `share-btn-primary`, ...), igual que los plugins de la
+comunidad. No se usan estilos en línea ni `style.css` en la raíz.
 
 ## Integración
 

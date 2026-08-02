@@ -3,12 +3,13 @@
  *
  * Comportamiento:
  *  - Se ejecuta dentro del panel lateral (isInsideMode) del editor.
- *  - El usuario escribe un DNI o nombre; al buscar, el backend devuelve los
- *    usuarios encontrados y los que ya tienen acceso al documento (marcados).
- *  - Con los checkboxes se seleccionan los accesos deseados (marcar = compartir,
- *    desmarcar = revocar).
- *  - "Compartir" abre una ventana modal de confirmación (confirmar.html) que
- *    resume los cambios y permite Aceptar o Rechazar (patrón de doc2md/saludar).
+ *  - Al abrir el panel se listan únicamente los usuarios con los que YA se
+ *    compartió el documento (marcados), para saber de entrada con quién se ha
+ *    compartido.
+ *  - Se puede desmarcar a alguien (revocar acceso) o buscar por DNI/nombre para
+ *    marcarlo (otorgar acceso).
+ *  - "Guardar" abre una ventana modal de confirmación (confirmar.html) que
+ *    resume los cambios y permite Aceptar o Rechazar.
  *  - Al aceptar, se envía la sincronización al backend (PUT shares/sync).
  *
  * Datos de sesión:
@@ -21,6 +22,8 @@
  *  - Sin CSS propio: se reutilizan las clases de plugins.css del SDK.
  *  - `Asc.plugin.onThemeChangedBase` delega la adaptación de tema al SDK.
  *  - `Asc.plugin.button` cierra la ventana modal (si hay id) o el plugin.
+ *  - La ventana modal se crea FRESCA en cada "Guardar" (una única instancia
+ *    reutilizada no re-dispara `onConfirmReady` ni los botones).
  *  - Código en un IIFE con "use strict".
  */
 ;(function (window, undefined) {
@@ -94,7 +97,7 @@
 
   function showStatus(message, isError) {
     refs.status.textContent = message || ''
-    refs.status.style.color = isError ? '#b91c1c' : 'inherit'
+    refs.status.className = 'share-status' + (isError ? ' error' : '')
   }
 
   // ---- Listado ----
@@ -102,35 +105,35 @@
   function render() {
     refs.results.innerHTML = ''
     if (state.loading) {
-      refs.results.appendChild(el('div', '', 'Buscando...'))
+      refs.results.appendChild(el('div', 'share-empty', 'Cargando...'))
       return
     }
     if (!state.users.length) {
       refs.results.appendChild(el(
         'div',
-        '',
-        state.query ? 'No se encontraron usuarios.' : 'Escriba un DNI o nombre para buscar.'
+        'share-empty',
+        state.query
+          ? 'No se encontraron usuarios.'
+          : 'Aún no has compartido el documento con nadie. Busca para compartir.'
       ))
       return
     }
     state.users.forEach(function (user) {
-      var row = el('label', '', '')
-      row.style.display = 'block'
-      row.style.padding = '4px 0'
-      row.style.cursor = 'pointer'
+      var row = el('label', 'share-row', '')
 
       var checkbox = document.createElement('input')
       checkbox.type = 'checkbox'
+      checkbox.className = 'share-row-checkbox'
       checkbox.checked = state.selection[user.id] === true
       checkbox.addEventListener('change', function () {
         state.selection[user.id] = checkbox.checked
       })
 
-      var details = el('span', '', '')
-      details.appendChild(el('strong', '', user.name || user.username))
+      var details = el('span', 'share-row-text', '')
+      details.appendChild(el('span', 'share-row-name', user.name || user.username))
       var meta = [user.dni, user.cargo].filter(Boolean).join(' | ')
       if (meta) {
-        details.appendChild(el('small', '', ' (' + meta + ')'))
+        details.appendChild(el('small', 'share-row-meta', ' — ' + meta))
       }
 
       row.appendChild(checkbox)
@@ -139,9 +142,9 @@
     })
   }
 
-  // Combina los compartidos (pre-marcados) con los encontrados, conservando la
-  // selección actual del usuario.
-  function mergeUsers(compartidos, encontrados) {
+  // Combina compartidos (pre-marcados) y encontrados, conservando la selección
+  // actual del usuario. `showShared` indica si solo se muestran los compartidos.
+  function mergeUsers(compartidos, encontrados, showShared) {
     var byId = Object.create(null)
     var users = []
     function addUser(user, shared) {
@@ -154,7 +157,9 @@
       }
     }
     ;(compartidos || []).forEach(function (user) { addUser(user, true) })
-    ;(encontrados || []).forEach(function (user) { addUser(user, false) })
+    if (!showShared) {
+      ;(encontrados || []).forEach(function (user) { addUser(user, false) })
+    }
     state.users = users
   }
 
@@ -168,7 +173,7 @@
     api(url)
       .then(function (response) {
         var data = response && response.data ? response.data : {}
-        mergeUsers(data.compartidos, data.encontrados)
+        mergeUsers(data.compartidos, data.encontrados, false)
       })
       .catch(function (error) {
         state.users = []
@@ -178,6 +183,37 @@
         state.loading = false
         render()
       })
+  }
+
+  // Carga inicial y refresco tras guardar: muestra SOLO los usuarios ya
+  // compartidos, marcados, para ver con quién se ha compartido de entrada.
+  function loadShared() {
+    state.loading = true
+    render()
+    var url = '/api/documents/' + encodeURIComponent(state.docId) + '/shares/search?q='
+    api(url)
+      .then(function (response) {
+        var data = response && response.data ? response.data : {}
+        mergeUsers(data.compartidos, data.encontrados, true)
+      })
+      .catch(function (error) {
+        state.users = []
+        showStatus(error.message, true)
+      })
+      .then(function () {
+        state.loading = false
+        render()
+      })
+  }
+
+  // Tras guardar: si hay una búsqueda activa se refresca la misma; si no, se
+  // vuelve a mostrar solo los compartidos.
+  function refresh() {
+    if (state.query) {
+      search()
+    } else {
+      loadShared()
+    }
   }
 
   // Calcula los cambios reales respecto al estado compartido original.
@@ -205,22 +241,24 @@
 
   function closeConfirmWindow() {
     if (confirmWindow) confirmWindow.close()
+    confirmWindow = null
   }
 
   // Aplica los cambios al backend (PUT shares/sync) y refresca el listado.
   function applySync() {
+    var delta = pendingDelta || { add: [], remove: [] }
     api('/api/documents/' + encodeURIComponent(state.docId) + '/shares/sync', {
       method: 'PUT',
-      body: pendingDelta
+      body: delta
     }).then(function () {
-      pendingDelta.add.forEach(function (id) { state.initialShared[id] = true })
-      pendingDelta.remove.forEach(function (id) {
+      delta.add.forEach(function (id) { state.initialShared[id] = true })
+      delta.remove.forEach(function (id) {
         delete state.initialShared[id]
         state.selection[id] = false
       })
       closeConfirmWindow()
       showStatus('Permisos actualizados correctamente.', false)
-      search()
+      refresh()
     }).catch(function (error) {
       closeConfirmWindow()
       showStatus(error.message, true)
@@ -253,15 +291,16 @@
       size: [460, 300]
     }
 
-    if (!confirmWindow) {
-      confirmWindow = new window.Asc.PluginWindow()
-      // Cuando el modal está listo se le envían los cambios a confirmar.
-      confirmWindow.attachEvent('onConfirmReady', function () {
-        confirmWindow.command('onConfirmData', pendingSummary)
-      })
-      confirmWindow.attachEvent('onConfirmAccept', applySync)
-      confirmWindow.attachEvent('onConfirmReject', closeConfirmWindow)
-    }
+    // Instancia FRESCA en cada "Guardar": reutilizar una única ventana no
+    // vuelve a disparar onConfirmReady ni los botones del modal.
+    closeConfirmWindow()
+    confirmWindow = new window.Asc.PluginWindow()
+    // Cuando el modal está listo se le envían los cambios a confirmar.
+    confirmWindow.attachEvent('onConfirmReady', function () {
+      confirmWindow.command('onConfirmData', pendingSummary)
+    })
+    confirmWindow.attachEvent('onConfirmAccept', applySync)
+    confirmWindow.attachEvent('onConfirmReject', closeConfirmWindow)
     confirmWindow.show(variation)
   }
 
@@ -273,7 +312,7 @@
     refs.results = document.getElementById('results')
     refs.status = document.getElementById('status')
     refs.searchButton = document.getElementById('btn-buscar')
-    refs.shareButton = document.getElementById('btn-compartir')
+    refs.saveButton = document.getElementById('btn-guardar')
     refs.closeButton = document.getElementById('btn-cerrar')
 
     refs.searchButton.addEventListener('click', search)
@@ -283,9 +322,9 @@
         search()
       }
     })
-    refs.shareButton.addEventListener('click', openConfirmation)
+    refs.saveButton.addEventListener('click', openConfirmation)
     refs.closeButton.addEventListener('click', closeSidebar)
-    render()
+    loadShared()
   }
 
   window.Asc.plugin.onThemeChanged = function (theme) {

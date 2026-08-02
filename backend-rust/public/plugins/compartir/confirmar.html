@@ -5,18 +5,19 @@
   <!--
     Ventana modal de confirmación (abierta con PluginWindow desde plugin.js).
     Igual que el resto de páginas del plugin, carga el SDK desde el CDN para
-    heredar los estilos nativos de ONLYOFFICE.
+    heredar los estilos nativos de ONLYOFFICE y el CSS propio para el layout.
   -->
   <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
   <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
   <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+  <link rel="stylesheet" href="resources/styles/style.css">
   <script type="text/javascript" src="confirmar.js"></script>
 </head>
-<body class="body" style="margin:0;display:flex;flex-direction:column;height:100%;">
-  <div id="resumen" style="flex:1;padding:16px;overflow:auto;"></div>
-  <div class="button_wrapper" style="padding:0 12px 12px;">
+<body class="body share-body share-modal-body">
+  <div id="resumen" class="share-modal-summary"></div>
+  <div class="button_wrapper">
     <div id="btn-rechazar" class="btn-text-default">Rechazar</div>
-    <div id="btn-aceptar" class="btn-text-default">Aceptar</div>
+    <div id="btn-aceptar" class="btn-text-default share-btn-right share-btn-primary">Aceptar</div>
   </div>
 </body>
 </html>
