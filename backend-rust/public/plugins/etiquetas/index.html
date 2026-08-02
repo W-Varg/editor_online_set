@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!--
+    SDK de plugins de ONLYOFFICE cargado desde el CDN oficial. plugins.css aporta
+    las clases de UI nativas (.body, .form-control, .btn-text-default, ...) para
+    heredar la apariencia del editor. Los estilos propios viven en
+    resources/styles/style.css (cargado después del SDK), como hacen los plugins
+    de la comunidad.
+  -->
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+  <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+  <link rel="stylesheet" href="resources/styles/style.css">
+  <script type="text/javascript" src="plugin.js"></script>
+</head>
+<body class="body share-body">
+  <!-- Panel lateral (isInsideMode): lista de etiquetas disponibles. -->
+  <div class="share-main">
+    <label class="label" for="search-input">Etiquetas disponibles</label>
+    <p id="hint" class="share-empty">Elige una etiqueta para insertarla en el cursor.</p>
+    <div id="results" class="share-list"></div>
+    <div id="status" class="share-status"></div>
+  </div>
+  <div class="button_wrapper">
+    <div id="btn-cerrar" class="btn-text-default">Cerrar</div>
+  </div>
+</body>
+</html>

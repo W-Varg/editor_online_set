@@ -46,6 +46,26 @@ El backend sirve estos plugins como archivos estáticos desde la ruta
 |-----------|---------------------------------------------|-------------------|-----------|-------|-------------------|
 | `saludar`   | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | no    | Activo (ejemplo)  |
 | `compartir` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | sí    | Activo            |
+| `etiquetas` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000003}` | word, cell        | no        | no    | Activo            |
+
+## Etiquetas dinámicas (`{{key}}`)
+
+El plugin `etiquetas` inserta texto literal `{{key}}` en el documento (en la
+posición del cursor). Las etiquetas quedan guardadas **sin resolver** en
+`data/{id}.bin` y el backend las sustituye por sus valores reales al
+previsualizar (`GET /api/documents/{id}/preview`) o convertir a PDF
+(`POST /api/documents/{id}/convert`).
+
+- Catálogo y resolución: `src/services/tag_service.rs` (constante
+  `TAG_DEFINITIONS` + `resolve(content, user, ext)`).
+- API: `GET /api/tags` devuelve `[{key, label, description}]`.
+- El contenido resuelto se sirve una sola vez en
+  `GET /api/preview-source/{token}` (TTL 60s) porque el convertidor de
+  ONLYOFFICE fetchea el documento por URL y no recibe bytes.
+- Los valores se calculan con los datos del **usuario que previsualiza**
+  (nombre, cargo, DNI, email) y la fecha actual del servidor.
+- Soporta `.docx` (`word/document.xml` + headers/footers) y `.xlsx`
+  (`xl/sharedStrings.xml` + hojas).
 
 ## Verificación
 
