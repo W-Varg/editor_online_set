@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!--
+    Panel lateral (isInsideMode) del plugin "Previsualizar".
+    Carga el SDK desde el CDN oficial para heredar la apariencia nativa y
+    enlaza el botón que abre la ventana modal con la vista previa en PDF.
+  -->
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+  <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+  <link rel="stylesheet" href="resources/styles/style.css">
+  <script type="text/javascript" src="plugin.js"></script>
+</head>
+<body class="body preview-body">
+  <div class="preview-main">
+    <label class="label">Vista previa</label>
+    <p id="preview-hint" class="preview-hint">
+      Genera un PDF del documento actual con las etiquetas {{key}} ya resueltas.
+    </p>
+    <div id="btn-previsualizar" class="preview-action">
+      <img class="preview-action-icon" src="resources/light/icon.png" alt="PDF">
+      <span>Previsualizar</span>
+    </div>
+    <div id="preview-status" class="preview-status"></div>
+  </div>
+  <div class="button_wrapper">
+    <div id="btn-cerrar" class="btn-text-default">Cerrar</div>
+  </div>
+</body>
+</html>

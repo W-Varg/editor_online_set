@@ -44,9 +44,22 @@ El backend sirve estos plugins como archivos estáticos desde la ruta
 
 | Carpeta   | GUID                                        | Editores          | Autostart | Owner | Estado            |
 |-----------|---------------------------------------------|-------------------|-----------|-------|-------------------|
-| `saludar`   | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | no    | Activo (ejemplo)  |
-| `compartir` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | sí    | Activo            |
-| `etiquetas` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000003}` | word, cell        | no        | no    | Activo            |
+| `saludar`       | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | no    | Activo (ejemplo)  |
+| `compartir`     | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | sí    | Activo            |
+| `etiquetas`     | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000003}` | word, cell        | no        | no    | Activo            |
+| `previsualizar` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000004}` | word, cell        | sí        | no    | Activo            |
+
+### Plugin "Previsualizar"
+
+Botón en el panel lateral derecho del editor que genera un PDF del documento
+actual con las etiquetas `{{key}}` resueltas (misma vista previa que la lista de
+documentos). `autostart: true`: arranca automáticamente al abrir el editor y
+abre el panel con el botón. Al pulsarlo, abre una ventana modal (`preview.html`)
+que solicita `GET /api/documents/{id}/preview` con el JWT del usuario y muestra
+el PDF generado en un `iframe`.
+
+- Opciones inyectadas: `{ docId, token, backendUrl }`.
+- Solo requiere tener acceso al documento (propietario o compartido).
 
 ## Etiquetas dinámicas (`{{key}}`)
 

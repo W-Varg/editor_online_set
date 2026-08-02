@@ -80,6 +80,17 @@ fn build_etiquetas_options(ctx: &PluginContext) -> serde_json::Value {
     })
 }
 
+/// Genera las opciones para el plugin "Previsualizar": el documento, el JWT del
+/// usuario y la URL pública del backend para solicitar el PDF con las etiquetas
+/// resueltas (`GET /api/documents/{id}/preview`).
+fn build_previsualizar_options(ctx: &PluginContext) -> serde_json::Value {
+    serde_json::json!({
+        "docId": ctx.doc_id,
+        "token": ctx.token,
+        "backendUrl": ctx.backend_url,
+    })
+}
+
 /// Catálogo de plugins personalizados.
 ///
 /// Se mantiene en una sola constante para que el alta de plugins sea declarativa
@@ -125,6 +136,21 @@ pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
         autostart: false,
         requires_owner: false,
         options: Some(build_etiquetas_options),
+    },
+    // Plugin "Previsualizar": genera un PDF del documento actual con las etiquetas
+    // {{key}} ya resueltas, igual que la vista previa de la lista de documentos.
+    // Vive en public/plugins/previsualizar/.
+    //
+    // `autostart: true`: arranca automáticamente al abrir el editor y muestra el
+    // panel lateral (derecho) con el botón "Previsualizar" y su icono PDF.
+    CustomPlugin {
+        id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000004}",
+        name: "Previsualizar",
+        dir: "previsualizar",
+        editors: &["word", "cell"],
+        autostart: true,
+        requires_owner: false,
+        options: Some(build_previsualizar_options),
     },
 ];
 
