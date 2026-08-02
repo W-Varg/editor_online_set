@@ -78,6 +78,16 @@ pub fn get_config(
     hasher.update(&content);
     let key = format!("{}-{:x}", doc_id, hasher.finalize());
 
+    // Menús de la cabecera del editor sin "File" para ocultar el menú "Archivo".
+    let menus: Vec<String> = match document_type {
+        "cell" => vec!["Home", "Insert", "Layout", "Data", "Collaboration", "Plugins", "Macros", "View"],
+        "slide" => vec!["Home", "Insert", "Layout", "Collaboration", "Plugins", "Macros", "View"],
+        _ => vec!["Home", "Insert", "Layout", "References", "Collaboration", "Plugins", "Macros", "View"],
+    }
+    .into_iter()
+    .map(|menu| menu.to_string())
+    .collect();
+
     Some(crate::dto::OnlyOfficeConfig {
         document_type: document_type.to_string(),
         document: crate::dto::OnlyOfficeDocument {
@@ -100,6 +110,7 @@ pub fn get_config(
             customization: crate::dto::OnlyOfficeCustomization {
                 autosave: true,
                 forcesave: true,
+                menu: Some(menus),
             },
             // Solo se incluye la sección `plugins` si hay plugins que aplicar al
             // tipo de documento actual; si la lista queda vacía se omite el campo.

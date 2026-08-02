@@ -191,6 +191,20 @@ Si tu IP de intranet es `172.27.38.53`, usa:
 - ONLYOFFICE: `http://172.27.38.53:8092`
 - Collabora: `http://172.27.38.53:8093`
 
+## Ocultar la pestaña "File" en ONLYOFFICE
+
+La edición community de DocumentServer no permite ocultar la pestaña `File/Archivo`
+vía configuración (ese parámetro, `customization.layout.*`, requiere licencia
+extendida). Para ocultarla se parchean los assets de `web-apps` dentro del
+contenedor:
+
+```bash
+scripts/patch_onlyoffice_hide_file_tab.sh
+```
+
+**Importante:** el parche se pierde al recrear el contenedor (`docker compose up
+--force-recreate`, `docker compose rm`). Re-ejecuta el script en ese caso.
+
 ## Flujo de uso
 
 1. Abre el frontend.

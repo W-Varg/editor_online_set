@@ -50,6 +50,11 @@ pub struct OnlyOfficeEditorConfig {
 pub struct OnlyOfficeCustomization {
     pub autosave: bool,
     pub forcesave: bool,
+    /// Menús del editor que se mostrarán en la cabecera. Si se omite, se muestran
+    /// todos. Enviar la lista SIN "File" oculta el menú "Archivo".
+    /// Disponible desde DocumentServer v7.3.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu: Option<Vec<String>>,
 }
 
 /// Configuración de plugins de ONLYOFFICE (formato moderno, DocumentServer v7+).
