@@ -12,6 +12,7 @@ pub fn get_config(
     doc_id: &str,
     user_id: &str,
     user_name: &str,
+    api_token: &str,
 ) -> Option<OnlyOfficeConfig> {
     let doc = super::document_service::get_by_id(db, doc_id)?;
     if doc.status == "final" || doc.ext == "pdf" {
@@ -31,19 +32,45 @@ pub fn get_config(
     // Plugins personalizados: se filtran por tipo de documento para que cada
     // plugin solo se ofrezca en los editores que lo soportan. La URL pública se
     // construye con el host de la petición (funciona en localhost e intranet).
-    let active_plugins = plugins::matching_plugins(&document_type);
+    let mut active_plugins = plugins::matching_plugins(&document_type);
+    let is_owner = crate::repos::document_repo::is_owner(db, doc_id, user_id);
+    // Los plugins marcados como `requires_owner` solo se inyectan al propietario.
+    active_plugins.retain(|plugin| !plugin.requires_owner || is_owner);
     for plugin in &active_plugins {
         tracing::debug!("Aplicando plugin \"{}\" ({}).", plugin.name, plugin.id);
     }
+
+    // URLs de los `config.json` que descargará el editor.
     let plugins_data: Vec<String> = active_plugins
         .iter()
         .map(|plugin| format!("{}/plugins/{}/config.json", browser_url, plugin.dir))
         .collect();
+    // GUIDs de los plugins que arrancan automáticamente.
     let autostart: Vec<String> = active_plugins
         .iter()
         .filter(|plugin| plugin.autostart)
         .map(|plugin| plugin.id.to_string())
         .collect();
+
+    // Opciones personalizadas por plugin (`editorConfig.plugins.options`).
+    let ctx = plugins::PluginContext {
+        doc_id,
+        token: api_token,
+        backend_url: &browser_url,
+    };
+    let options: serde_json::Map<String, serde_json::Value> = active_plugins
+        .iter()
+        .filter_map(|plugin| {
+            plugin
+                .options
+                .map(|builder| (plugin.id.to_string(), builder(&ctx)))
+        })
+        .collect();
+    let options = if options.is_empty() {
+        None
+    } else {
+        Some(serde_json::Value::Object(options))
+    };
 
     let mut hasher = Sha256::new();
     hasher.update(doc_id.as_bytes());
@@ -79,6 +106,7 @@ pub fn get_config(
             plugins: (!active_plugins.is_empty()).then(|| crate::dto::OnlyOfficePlugins {
                 autostart,
                 plugins_data,
+                options,
             }),
             user: crate::dto::OnlyOfficeUser {
                 id: user_id.to_string(),

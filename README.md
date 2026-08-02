@@ -301,8 +301,9 @@ config del editor con el formato moderno (`editorConfig.plugins.pluginsData` +
 - Registro de plugins: `backend-rust/src/helpers/plugins.rs`.
 - Para agregar uno: crea `backend-rust/public/plugins/<dir>/` y regístralo en
   `CUSTOM_PLUGINS`. Detalles en `backend-rust/public/plugins/README.md`.
-- Activo al editar: `saludar` (disponible en la pestaña "Plugins", sin abrir el
-  sidebar automáticamente).
+- Activos al editar: `saludar` (ejemplo) y `compartir` (compartir el documento
+  por DNI/nombre, solo para el propietario). Ambos quedan disponibles en la
+  pestaña "Plugins", sin abrir el sidebar automáticamente.
 
 ## Notas
 

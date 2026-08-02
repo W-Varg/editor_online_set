@@ -58,6 +58,8 @@ pub struct OnlyOfficeCustomization {
 ///   el editor, en orden.
 /// - `plugins_data`: lista de URLs absolutas a los `config.json` de cada plugin.
 ///   El editor las descarga y registra los plugins en la pestaña "Plugins".
+/// - `options`: datos personalizados que recibe cada plugin, indexados por GUID
+///   (`"asc.{...}": { ... }`). El plugin los lee como `Asc.plugin.info.options`.
 ///
 /// Más información:
 /// https://api.onlyoffice.com/docs/docs-api/usage-api/config/editor/plugins/
@@ -66,6 +68,8 @@ pub struct OnlyOfficePlugins {
     pub autostart: Vec<String>,
     #[serde(rename = "pluginsData")]
     pub plugins_data: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

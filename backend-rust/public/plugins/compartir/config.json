@@ -1,12 +1,40 @@
 {
   "name": "Compartir",
+  "nameLocale": {
+    "en": "Share",
+    "es": "Compartir"
+  },
   "guid": "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}",
+  "version": "2.0.0",
+  "minVersion": "7.2.0",
   "onlyofficeScheme": false,
   "variations": [
     {
-      "description": "Administra los usuarios que tienen acceso al documento",
+      "description": "Comparte el documento con otros usuarios por DNI o nombre.",
+      "descriptionLocale": {
+        "en": "Share the document with other users by ID number or name.",
+        "es": "Comparte el documento con otros usuarios por DNI o nombre."
+      },
       "url": "index.html",
-      "icons": ["icon.png", "icon@2x.png"],
+      "icons": ["resources/light/icon.png", "resources/light/icon@2x.png"],
+      "icons2": [
+        {
+          "style": "light",
+          "100%": { "normal": "resources/light/icon.png" },
+          "125%": { "normal": "resources/light/icon@1.25x.png" },
+          "150%": { "normal": "resources/light/icon@1.5x.png" },
+          "175%": { "normal": "resources/light/icon@1.75x.png" },
+          "200%": { "normal": "resources/light/icon@2x.png" }
+        },
+        {
+          "style": "dark",
+          "100%": { "normal": "resources/dark/icon.png" },
+          "125%": { "normal": "resources/dark/icon@1.25x.png" },
+          "150%": { "normal": "resources/dark/icon@1.5x.png" },
+          "175%": { "normal": "resources/dark/icon@1.75x.png" },
+          "200%": { "normal": "resources/dark/icon@2x.png" }
+        }
+      ],
       "isViewer": true,
       "EditorsSupport": ["word", "cell", "slide"],
       "isVisual": true,
@@ -14,7 +42,8 @@
       "isInsideMode": true,
       "initDataType": "none",
       "initData": "",
-      "buttons": []
+      "buttons": [],
+      "size": [320, 400]
     }
   ]
 }

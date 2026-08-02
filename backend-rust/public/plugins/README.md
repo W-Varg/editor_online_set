@@ -19,35 +19,42 @@ El backend sirve estos plugins como archivos estáticos desde la ruta
        dir: "mi-plugin",
        editors: &["word", "cell", "slide"],
        autostart: false,
+       requires_owner: false,
+       options: None,
    }
    ```
 
    - `dir` es la carpeta que creaste en `public/plugins/`.
    - `editors` filtra los tipos de documento donde estará disponible.
    - `autostart: true` hace que el plugin arranque solo al abrir el editor;
-     con `false` queda disponible en la pestaña "Plugins".
+     con `false` queda disponible en la pestaña "Plugins" (el sidebar no se
+     abre solo).
+   - `requires_owner: true` solo inyecta el plugin cuando el usuario es el
+     propietario del documento.
+   - `options` es un generador opcional `fn(&PluginContext) -> Value` que
+     produce `editorConfig.plugins.options[guid]`; el plugin lo lee como
+     `window.Asc.plugin.info.options`. Útil para pasar el documento, el JWT y
+     la URL del backend, como hace `compartir`.
 
 4. Reinicia el backend. El servicio `onlyoffice_service` genera las URLs de
-   `pluginsData` automáticamente.
+   `pluginsData`, el `autostart`, el filtro por propietario y las `options`
+   automáticamente.
 
 ## Plugins actuales
 
-| Carpeta   | GUID                                        | Editores          | Autostart | Estado               |
-|-----------|---------------------------------------------|-------------------|-----------|----------------------|
-| `saludar` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | Activo (ejemplo)     |
-| `compartir` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | No registrado aún    |
-
-`compartir` queda en el repositorio como referencia (panel para administrar
-accesos), pero hoy solo está activo `saludar`. Para activarlo, agrégalo a
-`CUSTOM_PLUGINS` igual que el anterior.
+| Carpeta   | GUID                                        | Editores          | Autostart | Owner | Estado            |
+|-----------|---------------------------------------------|-------------------|-----------|-------|-------------------|
+| `saludar`   | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | no    | Activo (ejemplo)  |
+| `compartir` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | sí    | Activo            |
 
 ## Verificación
 
 ```bash
-# El plugin debe ser accesible públicamente
+# Los archivos del plugin deben ser accesibles públicamente
 curl -I http://localhost:8091/plugins/saludar/config.json
+curl -I http://localhost:8091/plugins/compartir/config.json
 
-# La config del editor debe incluir pluginsData con la URL del plugin
+# La config del editor debe incluir pluginsData, autostart y options
 curl -s http://localhost:8091/api/onlyoffice/config/<document-id> \
   -H "Authorization: Bearer <jwt>" | jq '.editorConfig.plugins'
 ```
