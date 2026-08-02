@@ -212,7 +212,7 @@ pub async fn convert_to_pdf(
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
 
-    let pdf_bytes = match convert_content_to_pdf(&state, &doc, &content, &user.sub).await {
+    let pdf_bytes = match convert_content_to_pdf(&state, &doc, &content, &user.sub, &user.name).await {
         Ok(pdf) => pdf,
         Err(error) => {
             tracing::error!("Conversión {} fallida para {}: {}", doc.editor, id, error);
@@ -260,7 +260,7 @@ pub async fn preview(
         Some(content) => content,
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
-    match convert_content_to_pdf(&state, &doc, &content, &user.sub).await {
+    match convert_content_to_pdf(&state, &doc, &content, &user.sub, &user.name).await {
         Ok(pdf) => pdf_response(pdf, true),
         Err(error) => {
             tracing::error!("Previsualización {} fallida para {}: {}", doc.editor, id, error);
@@ -282,12 +282,23 @@ async fn convert_content_to_pdf(
     doc: &crate::models::Document,
     content: &[u8],
     user_id: &str,
+    session_name: &str,
 ) -> Result<Vec<u8>, String> {
     // Resuelve las etiquetas {{key}} con los datos del usuario que previsualiza.
-    let resolved = match user_repo::get_by_id(&state.db, user_id) {
-        Some(user) => tag_service::resolve(content, &user, &doc.ext),
-        None => None,
+    // Si el usuario ya no existe en la DB (IDs regenerados por un reseed), se usa
+    // el nombre de la sesión del JWT como fallback para no perder la resolución.
+    let user = match user_repo::get_by_id(&state.db, user_id) {
+        Some(user) => Some(user),
+        None => Some(crate::models::User {
+            id: user_id.to_string(),
+            username: user_id.to_string(),
+            name: session_name.to_string(),
+            dni: None,
+            cargo: None,
+            email: None,
+        }),
     };
+    let resolved = user.and_then(|u| tag_service::resolve(content, &u, &doc.ext));
     let (conversion_content, source_url) = match (&resolved, doc.editor.as_str()) {
         // ONLYOFFICE fetchea el documento por URL (no recibe bytes): el contenido
         // resuelto se registra con un token de un solo uso en /api/preview-source.

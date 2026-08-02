@@ -28,7 +28,7 @@ pub const TAG_DEFINITIONS: &[TagDef] = &[
     TagDef {
         key: "fecha_actual",
         label: "Fecha actual",
-        description: "Fecha del día en que se previsualiza (dd/mm/aaaa).",
+        description: "Fecha del día en que se previsualiza (dd/mm/aaaa HH:mm).",
     },
     TagDef {
         key: "nombre_usuario",
@@ -67,7 +67,7 @@ pub fn list() -> Vec<TagDefinition> {
 /// Calcula el valor de una etiqueta para el usuario indicado.
 pub fn value_for(key: &str, user: &User) -> Option<String> {
     match key {
-        "fecha_actual" => Some(chrono::Local::now().format("%d/%m/%Y").to_string()),
+        "fecha_actual" => Some(chrono::Local::now().format("%d/%m/%Y %H:%M").to_string()),
         "nombre_usuario" => Some(user.name.clone()),
         "cargo_usuario" => Some(user.cargo.clone().unwrap_or_default()),
         "dni" => Some(user.dni.clone().unwrap_or_default()),
@@ -297,6 +297,9 @@ mod tests {
         assert_eq!(value_for("dni", &u).unwrap(), "12345678");
         assert_eq!(value_for("email", &u).unwrap(), "user1@empresa.local");
         assert!(value_for("fecha_actual", &u).is_some());
+        let fecha = value_for("fecha_actual", &u).unwrap();
+        let re = Regex::new(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}$").unwrap();
+        assert!(re.is_match(&fecha), "fecha_actual debe tener formato dd/mm/yyyy HH:mm, era {fecha}");
         assert!(value_for("nope", &u).is_none());
     }
 

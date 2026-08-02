@@ -101,7 +101,9 @@ pub fn seed(db: &DbConn) {
         ("user5", "Admin123@", "User 5", "56789012", "Técnico", "user5@empresa.local"),
     ];
     for (username, password, name, dni, cargo, email) in &users {
-        let id = uuid::Uuid::new_v4().to_string();
+        // ID determinista por username (UUID v5) para que los reseeds no
+        // regeneren IDs y los documentos nunca queden con owner_id huérfanos.
+        let id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, username.as_bytes()).to_string();
         conn.execute(
             "INSERT OR IGNORE INTO users (id, username, password, name, dni, cargo, email, active, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8, ?8)",
