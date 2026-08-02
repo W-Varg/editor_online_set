@@ -2,12 +2,21 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <script type="text/javascript" src="/sdkjs-plugins/v1/plugins.js"></script>
-  <script type="text/javascript" src="/sdkjs-plugins/v1/plugins-ui.js"></script>
-  <link rel="stylesheet" href="/sdkjs-plugins/v1/plugins.css">
-  <script src="saludo.js"></script>
+  <!--
+    Ventana modal del plugin (abierta con PluginWindow desde plugin.js).
+    Igual que index.html, carga el SDK desde el CDN para heredar los estilos
+    nativos de ONLYOFFICE y no depender de los recursos internos de DocumentServer.
+  -->
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
+  <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
+  <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
+  <script type="text/javascript" src="saludo.js"></script>
 </head>
-<body class="body" style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100%;">
-  <div id="saludo-container" style="text-align:center;padding:24px;font-size:18px;"></div>
+<body>
+  <div class="body" style="padding:16px;text-align:center;">
+    <div id="saludo-container" class="form-control" style="min-height:60px;display:flex;align-items:center;justify-content:center;word-break:break-word;">
+      Cargando...
+    </div>
+  </div>
 </body>
 </html>

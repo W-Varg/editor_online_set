@@ -1,6 +1,6 @@
 use crate::db::DbConn;
 use crate::dto::OnlyOfficeConfig;
-use crate::helpers::{config, url};
+use crate::helpers::{config, plugins, url};
 use axum::http::HeaderMap;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
@@ -12,7 +12,6 @@ pub fn get_config(
     doc_id: &str,
     user_id: &str,
     user_name: &str,
-    api_token: &str,
 ) -> Option<OnlyOfficeConfig> {
     let doc = super::document_service::get_by_id(db, doc_id)?;
     if doc.status == "final" || doc.ext == "pdf" {
@@ -28,6 +27,23 @@ pub fn get_config(
         "pptx" | "ppt" => "slide",
         _ => "word",
     };
+
+    // Plugins personalizados: se filtran por tipo de documento para que cada
+    // plugin solo se ofrezca en los editores que lo soportan. La URL pública se
+    // construye con el host de la petición (funciona en localhost e intranet).
+    let active_plugins = plugins::matching_plugins(&document_type);
+    for plugin in &active_plugins {
+        tracing::debug!("Aplicando plugin \"{}\" ({}).", plugin.name, plugin.id);
+    }
+    let plugins_data: Vec<String> = active_plugins
+        .iter()
+        .map(|plugin| format!("{}/plugins/{}/config.json", browser_url, plugin.dir))
+        .collect();
+    let autostart: Vec<String> = active_plugins
+        .iter()
+        .filter(|plugin| plugin.autostart)
+        .map(|plugin| plugin.id.to_string())
+        .collect();
 
     let mut hasher = Sha256::new();
     hasher.update(doc_id.as_bytes());
@@ -57,23 +73,12 @@ pub fn get_config(
             customization: crate::dto::OnlyOfficeCustomization {
                 autosave: true,
                 forcesave: true,
-                plugins_data: Some(vec![
-                    vec![
-                        doc_id.to_string(),
-                        api_token.to_string(),
-                        browser_url.clone(),
-                    ],
-                ]),
             },
-            plugins: Some(crate::dto::OnlyOfficePlugins {
-                autostart: false,
-                plugins: vec![
-                    crate::dto::OnlyOfficePluginItem {
-                        id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}".to_string(),
-                        src: "http://localhost:8092/sdkjs-plugins/saludar/config.json".to_string(),
-                        name: Some("Saludar".to_string()),
-                    },
-                ],
+            // Solo se incluye la sección `plugins` si hay plugins que aplicar al
+            // tipo de documento actual; si la lista queda vacía se omite el campo.
+            plugins: (!active_plugins.is_empty()).then(|| crate::dto::OnlyOfficePlugins {
+                autostart,
+                plugins_data,
             }),
             user: crate::dto::OnlyOfficeUser {
                 id: user_id.to_string(),

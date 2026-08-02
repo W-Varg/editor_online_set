@@ -292,6 +292,17 @@ cd frontend-vue
 yarn dev --host
 ```
 
+## Plugins de ONLYOFFICE
+
+El backend sirve los plugins personalizados como estáticos y los inyecta en la
+config del editor con el formato moderno (`editorConfig.plugins.pluginsData` +
+`autostart`), sin instalar nada dentro del contenedor de DocumentServer.
+
+- Registro de plugins: `backend-rust/src/helpers/plugins.rs`.
+- Para agregar uno: crea `backend-rust/public/plugins/<dir>/` y regístralo en
+  `CUSTOM_PLUGINS`. Detalles en `backend-rust/public/plugins/README.md`.
+- Activo por defecto al editar: `saludar` (panel lateral + ventana modal).
+
 ## Notas
 
 - Para desarrollo local, el frontend debe abrirse con `--host`.

@@ -46,7 +46,6 @@ use crate::{__path_health_handler, __path_root_handler};
             crate::dto::onlyoffice::OnlyOfficeEditorConfig,
             crate::dto::onlyoffice::OnlyOfficeCustomization,
             crate::dto::onlyoffice::OnlyOfficePlugins,
-            crate::dto::onlyoffice::OnlyOfficePluginItem,
             crate::dto::onlyoffice::OnlyOfficeUser,
             crate::controllers::sharing_controller::SharePayload,
             crate::dto::sharing::ShareResponse,

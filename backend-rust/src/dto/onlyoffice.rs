@@ -50,22 +50,22 @@ pub struct OnlyOfficeEditorConfig {
 pub struct OnlyOfficeCustomization {
     pub autosave: bool,
     pub forcesave: bool,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "pluginsData")]
-    pub plugins_data: Option<Vec<Vec<String>>>,
 }
 
+/// Configuración de plugins de ONLYOFFICE (formato moderno, DocumentServer v7+).
+///
+/// - `autostart`: lista de GUIDs de plugins que arrancan automáticamente al abrir
+///   el editor, en orden.
+/// - `plugins_data`: lista de URLs absolutas a los `config.json` de cada plugin.
+///   El editor las descarga y registra los plugins en la pestaña "Plugins".
+///
+/// Más información:
+/// https://api.onlyoffice.com/docs/docs-api/usage-api/config/editor/plugins/
 #[derive(Debug, Serialize, ToSchema)]
 pub struct OnlyOfficePlugins {
-    pub autostart: bool,
-    pub plugins: Vec<OnlyOfficePluginItem>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct OnlyOfficePluginItem {
-    pub id: String,
-    pub src: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub autostart: Vec<String>,
+    #[serde(rename = "pluginsData")]
+    pub plugins_data: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
