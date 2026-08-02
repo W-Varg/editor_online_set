@@ -19,6 +19,7 @@
  *  - No se define CSS propio: se reutilizan las clases de plugins.css del SDK.
  *  - `Asc.plugin.onThemeChangedBase` se delega al SDK para que adapte los colores.
  *  - `Asc.plugin.button` cierra la ventana modal (si hay id) o el plugin.
+ *  - Los botones "Cancelar" y "Cerrar" del footer cierran el panel lateral.
  *  - Todo el código va en un IIFE con "use strict" para no ensuciar el scope global.
  */
 ;(function (window, undefined) {
@@ -31,6 +32,11 @@
 
   // Se mantiene una única instancia reutilizable de la ventana modal.
   var previewWindow = null
+
+  // Cierra el panel lateral del plugin.
+  function closeSidebar() {
+    window.Asc.plugin.executeCommand('close', '')
+  }
 
   // Lee el texto del input y lo envía al modal cuando este avisa que está listo.
   function sendGreeting() {
@@ -65,11 +71,20 @@
     previewWindow.show(variation)
   }
 
-  // Hook de inicialización: enlaza el botón del panel lateral.
+  // Hook de inicialización: enlaza el botón de "Mostrar saludo" y los botones
+  // de cierre del footer ("Cancelar" y "Cerrar").
   window.Asc.plugin.init = function () {
     var button = document.getElementById('btn-saludar')
     if (button) {
       button.addEventListener('click', openGreetingWindow)
+    }
+    var cancelButton = document.getElementById('btn-cancelar')
+    if (cancelButton) {
+      cancelButton.addEventListener('click', closeSidebar)
+    }
+    var closeButton = document.getElementById('btn-cerrar')
+    if (closeButton) {
+      closeButton.addEventListener('click', closeSidebar)
     }
   }
 

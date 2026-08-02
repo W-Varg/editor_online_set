@@ -34,7 +34,7 @@ El backend sirve estos plugins como archivos estáticos desde la ruta
 
 | Carpeta   | GUID                                        | Editores          | Autostart | Estado               |
 |-----------|---------------------------------------------|-------------------|-----------|----------------------|
-| `saludar` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | sí        | Activo (ejemplo)     |
+| `saludar` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}` | word, cell, slide | no        | Activo (ejemplo)     |
 | `compartir` | `asc.{8f2a1c40-7b3d-4e21-9a6f-000000000001}` | word, cell, slide | no        | No registrado aún    |
 
 `compartir` queda en el repositorio como referencia (panel para administrar

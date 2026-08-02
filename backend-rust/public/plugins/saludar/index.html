@@ -16,14 +16,20 @@
   <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
   <script type="text/javascript" src="plugin.js"></script>
 </head>
-<body>
-  <!-- Panel lateral (isInsideMode). Solo usa clases y estilos de ONLYOFFICE. -->
-  <div class="body" style="padding:16px;">
+<body class="body" style="margin:0;display:flex;flex-direction:column;height:100%;">
+  <!--
+    Panel lateral (isInsideMode). Solo usa clases y estilos de ONLYOFFICE.
+    El área de contenido ocupa el alto disponible y el footer queda abajo con
+    los botones de cierre del panel.
+  -->
+  <div style="flex:1;padding:16px;">
     <label class="label" for="saludo-input">Texto del saludo</label>
     <input id="saludo-input" class="form-control" type="text" placeholder="Escribe un saludo...">
-    <div class="button_wrapper" style="margin-top:12px;">
-      <div id="btn-saludar" class="btn-text-default">Mostrar saludo</div>
-    </div>
+    <div id="btn-saludar" class="btn-text-default" style="margin-top:12px;">Mostrar saludo</div>
+  </div>
+  <div class="button_wrapper" style="padding:0 12px 12px;">
+    <div id="btn-cancelar" class="btn-text-default">Cancelar</div>
+    <div id="btn-cerrar" class="btn-text-default">Cerrar</div>
   </div>
 </body>
 </html>

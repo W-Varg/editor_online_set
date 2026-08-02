@@ -14,9 +14,9 @@ configuración del editor:
 2. El registro de plugins (`src/helpers/plugins.rs`) declara este plugin con su
    GUID, carpeta y editores soportados.
 3. El servicio agrega `editorConfig.plugins.pluginsData` =
-   `http://<host>:8091/plugins/saludar/config.json` y el GUID en `autostart`.
-4. El editor descarga `config.json` desde el backend y registra el plugin en la
-   pestaña "Plugins".
+   `http://<host>:8091/plugins/saludar/config.json` (queda disponible en la
+   pestaña "Plugins"). El plugin **no arranca solo**: el sidebar se abre al
+   hacer clic en él (ver nota de `autostart` en `src/helpers/plugins.rs`).
 
 La URL pública se construye con el host de la petición, por lo que funciona tanto
 en `localhost` como por IP de intranet (p. ej. `http://172.27.38.53:8091`).
@@ -26,8 +26,9 @@ en `localhost` como por IP de intranet (p. ej. `http://172.27.38.53:8091`).
 ```text
 saludar/
 ├── config.json     → registro del plugin (GUID, variación de sidebar, iconos)
-├── index.html      → panel lateral: input + botón "Mostrar saludo"
-├── plugin.js       → lógica del panel y apertura de la ventana modal
+├── index.html      → panel lateral: input, "Mostrar saludo" y footer con
+│                     "Cancelar" / "Cerrar" (cierran el sidebar)
+├── plugin.js       → lógica del panel, cierre del sidebar y apertura del modal
 ├── saludo.html     → ventana modal que muestra el saludo
 ├── saludo.js       → lógica de la ventana modal
 └── resources/
@@ -55,7 +56,15 @@ Eso permite servirlo externamente desde cualquier host.
    y responde `previewWindow.command('onSaludoData', { texto })`.
 4. El modal recibe `onSaludoData` con `attachEvent` y pinta el texto.
 
+## Cierre del panel
+
+Los botones **Cancelar** y **Cerrar** del footer invocan
+`window.Asc.plugin.executeCommand('close', '')`, que cierra el sidebar.
+
 ## Cambios
 
+- `v2.1.0`: el plugin se carga disponible pero **no abre el sidebar al iniciar**
+  (`autostart: false`); se agregan los botones "Cancelar" y "Cerrar" que cierran
+  el panel.
 - `v2.0.0`: reescrito con buenas prácticas (sin CSS propio, SDK por CDN,
   formato de config moderno, registro declarativo en el backend).

@@ -43,12 +43,16 @@ pub struct CustomPlugin {
 pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
     // Plugin de ejemplo "Saludar": sidebar con un cuadro de texto que abre una
     // ventana modal con el saludo. Vive en public/plugins/saludar/.
+    //
+    // `autostart: false`: el plugin queda disponible en la pestaña "Plugins"
+    // (se "carga por defecto" al abrir el editor) pero el sidebar NO se abre
+    // solo; se muestra al hacer clic en el plugin.
     CustomPlugin {
         id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}",
         name: "Saludar",
         dir: "saludar",
         editors: &["word", "cell", "slide"],
-        autostart: true,
+        autostart: false,
     },
 ];
 
