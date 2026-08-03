@@ -32,6 +32,26 @@ export interface CreateDocumentPayload {
   name: string
   ext: string
   editor: string
+  template_id?: string
+}
+
+export interface Template {
+  id: string
+  name: string
+  ext: string
+  mime: string
+  editor: string
+  size: number
+  owner_id: string
+  owner_name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTemplatePayload {
+  name: string
+  ext: string
+  source_document_id?: string
 }
 
 export interface CollaboraSession {

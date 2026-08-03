@@ -4,3 +4,4 @@ pub mod sharing_controller;
 pub mod collabora_controller;
 pub mod onlyoffice_controller;
 pub mod tag_controller;
+pub mod template_controller;

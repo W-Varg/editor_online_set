@@ -31,7 +31,12 @@ export async function getDocument(id: string) {
   return res.json()
 }
 
-export async function createDocument(data: { name: string; ext: string; editor: string }) {
+export async function createDocument(data: {
+  name: string
+  ext: string
+  editor: string
+  template_id?: string
+}) {
   const res = await fetch(`${API_BASE}/api/documents`, {
     method: 'POST',
     headers: headers(),
@@ -82,6 +87,69 @@ export async function getCollaboraSession(id: string) {
 export async function getOnlyOfficeConfig(id: string) {
   const res = await fetch(`${API_BASE}/api/onlyoffice/config/${id}`, { headers: headers() })
   if (!res.ok) throw new Error('Failed to get OnlyOffice config')
+  return res.json()
+}
+
+export async function listTemplates() {
+  const res = await fetch(`${API_BASE}/api/templates`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to fetch templates')
+  return res.json()
+}
+
+export async function createTemplate(data: { name: string; ext: string; source_document_id?: string }) {
+  const res = await fetch(`${API_BASE}/api/templates`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'Failed to create template')
+  }
+  return res.json()
+}
+
+export async function renameTemplate(id: string, name: string) {
+  const res = await fetch(`${API_BASE}/api/templates/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error('Failed to rename template')
+  return res.json()
+}
+
+export async function deleteTemplate(id: string) {
+  const res = await fetch(`${API_BASE}/api/templates/${id}`, {
+    method: 'DELETE',
+    headers: headers(),
+  })
+  if (!res.ok) throw new Error('Failed to delete template')
+  return res.json()
+}
+
+export async function previewTemplate(id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/templates/${id}/preview`, {
+    headers: headers(),
+  })
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'No se pudo generar la previsualización')
+  }
+  return res.blob()
+}
+
+export async function getTemplateOnlyOfficeConfig(id: string) {
+  const res = await fetch(`${API_BASE}/api/onlyoffice/config/template/${id}`, {
+    headers: headers(),
+  })
+  if (!res.ok) throw new Error('Failed to get template OnlyOffice config')
+  return res.json()
+}
+
+export async function listUsers() {
+  const res = await fetch(`${API_BASE}/api/users`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to fetch users')
   return res.json()
 }
 

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use crate::db::DbConn;
 use crate::dto::{DocumentResponse, CreateDocument};
 use crate::models::Document;
-use crate::repos::document_repo;
+use crate::repos::{document_repo, template_repo};
 
 fn doc_ext_to_mime(ext: &str) -> &str {
     match ext {
@@ -17,10 +17,19 @@ pub fn create(db: &DbConn, db_path: &PathBuf, req: &CreateDocument, owner_id: &s
     let ext = req.ext.to_lowercase();
     let mime = doc_ext_to_mime(&ext).to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let content = match ext.as_str() {
-        "docx" => crate::templates::generate_blank_docx(),
-        "xlsx" => crate::templates::generate_blank_xlsx(),
-        _ => return Err("Unsupported extension".to_string()),
+
+    // Si se crea desde una plantilla, el documento copia el contenido de la
+    // plantilla (que hereda etiquetas, encabezados/pies y maquetación). En caso
+    // contrario se genera un documento en blanco del tipo indicado.
+    let content = if let Some(template_id) = &req.template_id {
+        template_repo::read_file(db_path, template_id)
+            .ok_or_else(|| "Plantilla no encontrada".to_string())?
+    } else {
+        match ext.as_str() {
+            "docx" => crate::templates::generate_blank_docx(),
+            "xlsx" => crate::templates::generate_blank_xlsx(),
+            _ => return Err("Unsupported extension".to_string()),
+        }
     };
 
     let doc = Document {

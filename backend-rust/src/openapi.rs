@@ -29,7 +29,17 @@ use crate::{__path_health_handler, __path_root_handler};
         crate::controllers::onlyoffice_controller::config,
         crate::controllers::onlyoffice_controller::callback,
         crate::controllers::tag_controller::list_tags,
-        crate::controllers::tag_controller::preview_source
+        crate::controllers::tag_controller::preview_source,
+        crate::controllers::auth_controller::list_users,
+        crate::controllers::template_controller::list,
+        crate::controllers::template_controller::create,
+        crate::controllers::template_controller::get,
+        crate::controllers::template_controller::rename,
+        crate::controllers::template_controller::delete,
+        crate::controllers::template_controller::content,
+        crate::controllers::template_controller::preview,
+        crate::controllers::template_controller::config,
+        crate::controllers::template_controller::callback
     ),
     components(
         schemas(
@@ -59,7 +69,11 @@ use crate::{__path_health_handler, __path_root_handler};
             crate::dto::system::RootResponse,
             crate::dto::system::HealthResponse,
             crate::models::User,
-            crate::models::Document
+            crate::models::Document,
+            crate::models::Template,
+            crate::dto::template::CreateTemplate,
+            crate::dto::template::RenameTemplate,
+            crate::dto::template::TemplateResponse
         )
     )
 )]

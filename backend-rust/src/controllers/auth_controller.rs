@@ -1,9 +1,11 @@
 use std::sync::Arc;
 use axum::{extract::State, Json};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use crate::AppState;
 use crate::dto::LoginRequest;
+use crate::helpers::{config, jwt};
 use crate::services::auth_service;
+use crate::repos::user_repo;
 
 #[utoipa::path(
     post,
@@ -22,4 +24,23 @@ pub async fn login(
     auth_service::login(&state.db, &req)
         .map(Json)
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Credenciales inválidas".to_string()))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/users",
+    responses(
+        (status = 200, description = "Listado de usuarios activos (solo lectura)", body = [crate::dto::UserSearchResult]),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Auth"
+)]
+pub async fn list_users(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<crate::dto::UserSearchResult>>, (StatusCode, String)> {
+    if jwt::extract_user(&headers, &config::jwt_secret()).is_none() {
+        return Err((StatusCode::UNAUTHORIZED, "Token requerido".to_string()));
+    }
+    Ok(Json(user_repo::list(&state.db)))
 }

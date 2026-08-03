@@ -2,6 +2,7 @@
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
+import Menu from '@/components/Menu.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -17,6 +18,7 @@ function handleLogout() {
   <header v-if="auth.isAuthenticated" class="topbar">
     <div class="nav-left">
       <RouterLink to="/" class="brand">Editor Online</RouterLink>
+      <Menu />
     </div>
     <div class="nav-right">
       <span class="user-name">{{ auth.userName }}</span>
@@ -45,6 +47,12 @@ function handleLogout() {
   font-weight: 700;
   font-size: 1.1rem;
   color: #2563eb;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .nav-right {

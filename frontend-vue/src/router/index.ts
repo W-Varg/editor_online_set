@@ -16,6 +16,24 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/templates',
+      name: 'templates',
+      component: () => import('@/views/TemplatesView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/templates/editor/:id',
+      name: 'template-editor',
+      component: () => import('@/views/TemplateEditor.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: () => import('@/views/UsersView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/editor/collabora/:id',
       name: 'editor-collabora',
       component: () => import('@/views/EditorCollabora.vue'),

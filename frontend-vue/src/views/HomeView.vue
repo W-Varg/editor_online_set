@@ -2,27 +2,38 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { listDocuments, createDocument, deleteDocument, convertToPdf } from '@/services/api'
-import type { Document } from '@/services/types'
+import { listDocuments, createDocument, deleteDocument, convertToPdf, listTemplates } from '@/services/api'
+import type { Document, Template } from '@/services/types'
 import DocumentsTable from '@/components/DocumentsTable.vue'
+import TemplatePreviewModal from '@/components/TemplatePreviewModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
 
 const docs = ref<Document[]>([])
+const templates = ref<Template[]>([])
 const loading = ref(true)
 const error = ref('')
 const formName = ref('')
 const formExt = ref<'docx' | 'xlsx'>('docx')
 const formEditor = ref<'onlyoffice' | 'collabora'>('onlyoffice')
+const formTemplateId = ref('')
 const creating = ref(false)
 const converting = ref<string | null>(null)
 const previewing = ref<string | null>(null)
+const templatePreviewId = ref<string | null>(null)
 const activeTab = ref<'mine' | 'shared'>('mine')
 const toast = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
-onMounted(() => loadDocs())
+onMounted(async () => {
+  await loadDocs()
+  try {
+    templates.value = await listTemplates()
+  } catch {
+    templates.value = []
+  }
+})
 onBeforeUnmount(() => {
   if (toastTimer) clearTimeout(toastTimer)
 })
@@ -53,6 +64,7 @@ async function handleCreate() {
       name: formName.value.trim(),
       ext: formExt.value,
       editor: formEditor.value,
+      template_id: formTemplateId.value || undefined,
     })
     formName.value = ''
     if (activeTab.value === 'shared') switchTab('mine')
@@ -62,6 +74,14 @@ async function handleCreate() {
   } finally {
     creating.value = false
   }
+}
+
+function selectedTemplate(): Template | undefined {
+  return templates.value.find((t) => t.id === formTemplateId.value)
+}
+
+function previewSelectedTemplate() {
+  if (formTemplateId.value) templatePreviewId.value = formTemplateId.value
 }
 
 async function handleDelete(doc: Document) {
@@ -138,6 +158,25 @@ function previewDocument(id: string) {
               <option value="collabora">Collabora Online</option>
             </select>
           </div>
+          <div class="field">
+            <label>Plantilla</label>
+            <select v-model="formTemplateId">
+              <option value="">Sin plantilla (en blanco)</option>
+              <option v-for="t in templates" :key="t.id" :value="t.id">
+                {{ t.name }}.{{ t.ext }}
+              </option>
+            </select>
+          </div>
+          <div class="field action">
+            <button
+              v-if="selectedTemplate()"
+              type="button"
+              class="btn-preview-template"
+              @click="previewSelectedTemplate"
+            >
+              Vista previa
+            </button>
+          </div>
           <div class="field action">
             <button type="submit" :disabled="creating || !formName.trim()">
               {{ creating ? 'Creando...' : 'Crear documento' }}
@@ -161,6 +200,12 @@ function previewDocument(id: string) {
       @convert="handleConvert"
       @preview="previewDocument"
       @delete="handleDelete"
+    />
+
+    <TemplatePreviewModal
+      :template-id="templatePreviewId"
+      :template-name="selectedTemplate()?.name"
+      @close="templatePreviewId = null"
     />
   </div>
 </template>
@@ -233,6 +278,14 @@ function previewDocument(id: string) {
 .field.action button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.btn-preview-template {
+  background: #475569;
+}
+
+.btn-preview-template:hover {
+  background: #334155;
 }
 
 .error-banner {

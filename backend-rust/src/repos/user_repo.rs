@@ -35,7 +35,26 @@ pub fn authenticate(db: &DbConn, username: &str, password: &str) -> Option<User>
     ).ok()
 }
 
-pub fn search(db: &DbConn, query: &str, exclude_id: &str) -> Vec<UserSearchResult> {    let conn = db.lock().unwrap();
+pub fn list(db: &DbConn) -> Vec<UserSearchResult> {
+    let conn = db.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, username, name, dni, cargo FROM users
+         WHERE active = 1
+         ORDER BY name COLLATE NOCASE"
+    ).unwrap();
+    stmt.query_map([], |row| {
+        Ok(UserSearchResult {
+            id: row.get(0)?,
+            username: row.get(1)?,
+            name: row.get(2)?,
+            dni: row.get(3)?,
+            cargo: row.get(4)?,
+        })
+    }).unwrap().filter_map(|r| r.ok()).collect()
+}
+
+pub fn search(db: &DbConn, query: &str, exclude_id: &str) -> Vec<UserSearchResult> {
+    let conn = db.lock().unwrap();
     let pattern = format!("%{}%", query);
     let mut stmt = conn.prepare(
         "SELECT id, username, name, dni, cargo FROM users

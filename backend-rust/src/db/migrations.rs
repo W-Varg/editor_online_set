@@ -38,6 +38,18 @@ pub fn run_migrations(conn: &Connection) {
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (shared_by) REFERENCES users(id),
             UNIQUE(document_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS templates (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            ext TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            editor TEXT NOT NULL DEFAULT 'onlyoffice',
+            size INTEGER NOT NULL DEFAULT 0,
+            owner_id TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         );"
     ).expect("Failed to create tables");
 

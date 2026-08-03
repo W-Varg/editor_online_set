@@ -159,6 +159,13 @@ pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
     },
 ];
 
+/// GUIDs de los plugins que se inyectan en el editor de plantillas.
+///
+/// Al editar una plantilla solo interesa insertar etiquetas `{{key}}`, por lo
+/// que se ofrece el plugin "Etiquetas" pero no el "Previsualizar" (orientado a
+/// documentos: genera el PDF del documento actual).
+pub const TEMPLATE_PLUGINS: &[&str] = &["asc.{8f2a1c40-7b3d-4e21-9a6f-000000000003}"];
+
 /// Devuelve los plugins que soportan el tipo de documento indicado.
 ///
 /// `document_type` es uno de los valores que devuelve el editor de ONLYOFFICE
@@ -167,5 +174,13 @@ pub fn matching_plugins(document_type: &str) -> Vec<&'static CustomPlugin> {
     CUSTOM_PLUGINS
         .iter()
         .filter(|plugin| plugin.editors.contains(&document_type))
+        .collect()
+}
+
+/// Devuelve los plugins permitidos en el editor de plantillas.
+pub fn template_plugins(document_type: &str) -> Vec<&'static CustomPlugin> {
+    matching_plugins(document_type)
+        .into_iter()
+        .filter(|plugin| TEMPLATE_PLUGINS.contains(&plugin.id))
         .collect()
 }
