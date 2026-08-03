@@ -50,9 +50,19 @@
       headers.Authorization = 'Bearer ' + data.token
     }
     showLoading()
-    fetch(backendUrl + '/api/documents/' + encodeURIComponent(data.docId) + '/preview', {
-      headers: headers
-    })
+    // 1) Fuerza el guardado en ONLYOFFICE (forcesave) para que el backend tenga la
+    //    última versión del documento antes de generar el PDF. El endpoint espera a
+    //    que el callback status 6 haya persistido el archivo.
+    forceSave(backendUrl, data)
+      .catch(function () {
+        // Si el forcesave falla se continúa igualmente con lo último guardado.
+      })
+      .then(function () {
+        // 2) Genera el PDF con el contenido ya persistido.
+        return fetch(backendUrl + '/api/documents/' + encodeURIComponent(data.docId) + '/preview', {
+          headers: headers
+        })
+      })
       .then(function (response) {
         if (!response.ok) {
           return response.text().then(function (text) {
@@ -70,6 +80,25 @@
       .catch(function (error) {
         showError(error.message)
       })
+  }
+
+  function forceSave(backendUrl, data) {
+    var headers = { 'Content-Type': 'application/json' }
+    if (data.token) {
+      headers.Authorization = 'Bearer ' + data.token
+    }
+    return fetch(backendUrl + '/api/documents/' + encodeURIComponent(data.docId) + '/force-save', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ key: data.key || '' })
+    }).then(function (response) {
+      if (!response.ok) {
+        return response.text().then(function (text) {
+          throw new Error('El guardado previo falló: ' + (text || 'Error HTTP ' + response.status))
+        })
+      }
+      return response.json()
+    })
   }
 
   // Avisa al plugin padre que el modal está listo para recibir los datos.

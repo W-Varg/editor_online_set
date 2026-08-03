@@ -38,7 +38,8 @@
   var state = {
     docId: '',
     token: '',
-    backendUrl: ''
+    backendUrl: '',
+    key: ''
   }
   var previewWindow = null
 
@@ -51,6 +52,7 @@
     state.docId = opts.docId || ''
     state.token = opts.token || ''
     state.backendUrl = (opts.backendUrl || '').replace(/\/$/, '')
+    state.key = opts.key || ''
   }
 
   function closeSidebar() {
@@ -64,7 +66,8 @@
     previewWindow.command('onPreviewData', {
       docId: state.docId,
       token: state.token,
-      backendUrl: state.backendUrl
+      backendUrl: state.backendUrl,
+      key: state.key
     })
   }
 

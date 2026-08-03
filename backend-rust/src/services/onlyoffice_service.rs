@@ -65,11 +65,21 @@ pub fn get_config(
         .map(|plugin| plugin.id.to_string())
         .collect();
 
+    // Clave de sesión del documento en ONLYOFFICE: estable durante toda la edición
+    // (cambia al guardar para invalidar la caché del editor). Se pasa también a los
+    // plugins para que puedan forzar un guardado remoto con `force-save`.
+    let mut hasher = Sha256::new();
+    hasher.update(doc_id.as_bytes());
+    hasher.update(b":");
+    hasher.update(&content);
+    let key = format!("{}-{:x}", doc_id, hasher.finalize());
+
     // Opciones personalizadas por plugin (`editorConfig.plugins.options`).
     let ctx = plugins::PluginContext {
         doc_id,
         token: api_token,
         backend_url: &browser_url,
+        key: &key,
     };
     let options: serde_json::Map<String, serde_json::Value> = active_plugins
         .iter()
@@ -84,12 +94,6 @@ pub fn get_config(
     } else {
         Some(serde_json::Value::Object(options))
     };
-
-    let mut hasher = Sha256::new();
-    hasher.update(doc_id.as_bytes());
-    hasher.update(b":");
-    hasher.update(&content);
-    let key = format!("{}-{:x}", doc_id, hasher.finalize());
 
     // Menús de la cabecera del editor sin "File" para ocultar el menú "Archivo".
     let menus = editor_menus(&document_type);
@@ -168,10 +172,19 @@ pub fn get_template_config(
         .filter(|plugin| plugin.autostart)
         .map(|plugin| plugin.id.to_string())
         .collect();
+
+    // Clave de sesión de la plantilla en ONLYOFFICE (estable durante la edición).
+    let mut hasher = Sha256::new();
+    hasher.update(template_id.as_bytes());
+    hasher.update(b":");
+    hasher.update(&content);
+    let key = format!("{}-{:x}", template_id, hasher.finalize());
+
     let ctx = plugins::PluginContext {
         doc_id: template_id,
         token: api_token,
         backend_url: &backend_url,
+        key: &key,
     };
     let options: serde_json::Map<String, serde_json::Value> = active_plugins
         .iter()
@@ -186,12 +199,6 @@ pub fn get_template_config(
     } else {
         Some(serde_json::Value::Object(options))
     };
-
-    let mut hasher = Sha256::new();
-    hasher.update(template_id.as_bytes());
-    hasher.update(b":");
-    hasher.update(&content);
-    let key = format!("{}-{:x}", template_id, hasher.finalize());
 
     let menus = editor_menus(&document_type);
 

@@ -21,6 +21,109 @@ fn converter_url() -> String {
     }
 }
 
+/// Endpoints del *command service* de ONLYOFFICE, en orden de preferencia:
+/// `/command` (Document Server 8.2+) y `/coauthoring/CommandService.ashx` (anterior).
+fn command_service_urls() -> Vec<String> {
+    let base = std::env::var("ONLYOFFICE_CONVERTER_URL")
+        .or_else(|_| std::env::var("ONLYOFFICE_URL"))
+        .unwrap_or_else(|_| "http://localhost:8092".to_string());
+    let base = base.trim_end_matches('/');
+    let base = base.strip_suffix("/healthcheck").unwrap_or(base).to_string();
+    if base.ends_with("CommandService.ashx") || base.ends_with("/command") {
+        vec![base]
+    } else {
+        vec![
+            format!("{base}/command"),
+            format!("{base}/coauthoring/CommandService.ashx"),
+        ]
+    }
+}
+
+fn onlyoffice_secret() -> String {
+    std::env::var("ONLYOFFICE_JWT_SECRET")
+        .or_else(|_| std::env::var("JWT_SECRET"))
+        .unwrap_or_else(|_| "my-secret-key".to_string())
+}
+
+/// Error interno para distinguir "el endpoint no existe" (intenta la siguiente URL)
+/// de un fallo real del protocolo (no reintenta otras URLs).
+enum CommandError {
+    NotFound,
+    Other(String),
+}
+
+impl std::fmt::Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommandError::NotFound => write!(f, "endpoint no encontrado"),
+            CommandError::Other(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+async fn force_save_via(
+    client: &Client,
+    url: &str,
+    key: &str,
+    secret: &str,
+) -> Result<(), CommandError> {
+    let payload = json!({ "c": "forcesave", "key": key });
+    let token = encode(
+        &Header::default(),
+        &payload,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    ).map_err(|e| CommandError::Other(format!("No se pudo firmar el forcesave: {e}")))?;
+
+    let response = client
+        .post(format!("{url}?shardkey={key}"))
+        .json(&json!({ "token": token }))
+        .send()
+        .await
+        .map_err(|_| CommandError::NotFound)?;
+
+    let status = response.status();
+    let raw_body = response
+        .text()
+        .await
+        .map_err(|e| CommandError::Other(format!("No se pudo leer la respuesta de ONLYOFFICE ({status}): {e}")))?;
+    if !status.is_success() {
+        return Err(CommandError::NotFound);
+    }
+    let body: Value = serde_json::from_str(&raw_body)
+        .map_err(|_| CommandError::NotFound)?;
+
+    let error = body.get("error").and_then(Value::as_i64).unwrap_or(0);
+    // 0: sin errores. 4: no hubo cambios antes del forcesave (el archivo ya está al día).
+    if error == 0 || error == 4 {
+        return Ok(());
+    }
+    Err(CommandError::Other(format!(
+        "ONLYOFFICE devolvió un error al forzar el guardado (código {error}): {raw_body}"
+    )))
+}
+
+/// Solicita a ONLYOFFICE un forcesave del documento en edición mediante el
+/// *command service*. La `key` debe ser la clave de sesión activa del editor
+/// (la que recibe el plugin en `editorConfig.plugins.options`).
+pub async fn force_save(key: &str) -> Result<(), String> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("No se pudo crear el cliente ONLYOFFICE: {e}"))?;
+    let secret = onlyoffice_secret();
+    let mut last_error = String::new();
+    for url in command_service_urls() {
+        match force_save_via(&client, &url, key, &secret).await {
+            Ok(()) => return Ok(()),
+            Err(CommandError::NotFound) => last_error = format!("{url}: endpoint no encontrado"),
+            Err(CommandError::Other(msg)) => return Err(msg),
+        }
+    }
+    Err(format!(
+        "No se pudo contactar el command service de ONLYOFFICE ({last_error})"
+    ))
+}
+
 fn file_type(ext: &str) -> &str {
     match ext.to_ascii_lowercase().as_str() {
         "doc" => "doc",

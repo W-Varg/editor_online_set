@@ -338,7 +338,9 @@ pub async fn callback(
 ) -> Json<serde_json::Value> {
     let status = payload.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
     let url = payload.get("url").and_then(|u| u.as_str()).map(|s| s.to_string());
-    if status == 2 || status == 3 {
+    // Status 2: documento listo para guardar (autoguardado/cierre).
+    // Status 6: forcesave (p. ej. al pulsar el botón "Guardar" con `forcesave: true`).
+    if status == 2 || status == 6 {
         if let Some(download_url) = url {
             let client = reqwest::Client::builder()
                 .danger_accept_invalid_certs(true)
@@ -349,7 +351,7 @@ pub async fn callback(
                         if let Some(template) = template_repo::get_by_id(&state.db, &id) {
                             template_repo::write_file(&state.db_path, &template, &bytes).unwrap_or_default();
                             template_repo::update_size(&state.db, &id, bytes.len() as u64);
-                            tracing::info!("Callback saved template {} ({} bytes)", id, bytes.len());
+                            tracing::info!("Callback saved template {} ({} bytes, status {})", id, bytes.len(), status);
                         }
                     }
                 }

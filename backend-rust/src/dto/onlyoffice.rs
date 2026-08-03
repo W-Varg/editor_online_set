@@ -1,5 +1,13 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+/// Cuerpo de `POST /api/documents/{id}/force-save`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ForceSaveRequest {
+    /// Clave de sesión del documento en el editor de ONLYOFFICE.
+    #[schema(example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789-1754160000")]
+    pub key: String,
+}
 
 /// Configuración completa para inicializar el editor de ONLYOFFICE en el navegador.
 #[derive(Debug, Serialize, ToSchema)]

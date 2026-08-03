@@ -27,6 +27,9 @@ pub struct PluginContext<'a> {
     pub token: &'a str,
     /// URL pública del backend accesible desde el navegador del usuario.
     pub backend_url: &'a str,
+    /// Clave de sesión del documento en el editor de ONLYOFFICE. Es estable
+    /// durante toda la sesión y permite forzar un guardado remoto (forcesave).
+    pub key: &'a str,
 }
 
 /// Constructor de las opciones que el editor le pasará al plugin a través de
@@ -81,13 +84,15 @@ fn build_etiquetas_options(ctx: &PluginContext) -> serde_json::Value {
 }
 
 /// Genera las opciones para el plugin "Previsualizar": el documento, el JWT del
-/// usuario y la URL pública del backend para solicitar el PDF con las etiquetas
-/// resueltas (`GET /api/documents/{id}/preview`).
+/// usuario, la URL pública del backend para solicitar el PDF con las etiquetas
+/// resueltas (`GET /api/documents/{id}/preview`) y la `key` de sesión para
+/// forzar un guardado previo (`POST /api/documents/{id}/force-save`).
 fn build_previsualizar_options(ctx: &PluginContext) -> serde_json::Value {
     serde_json::json!({
         "docId": ctx.doc_id,
         "token": ctx.token,
         "backendUrl": ctx.backend_url,
+        "key": ctx.key,
     })
 }
 

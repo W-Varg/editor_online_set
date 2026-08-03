@@ -332,6 +332,10 @@ async fn main() {
             get(controllers::onlyoffice_controller::config),
         )
         .route(
+            "/api/documents/{id}/force-save",
+            post(controllers::onlyoffice_controller::force_save),
+        )
+        .route(
             "/download/{id}",
             get(controllers::document_controller::download),
         )
