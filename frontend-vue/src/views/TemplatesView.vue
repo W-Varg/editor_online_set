@@ -2,8 +2,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createTemplate, deleteTemplate, listTemplates, renameTemplate } from '@/services/api'
-import type { Template } from '@/services/types'
+import type { Template, HeaderFooterMode } from '@/services/types'
 import TemplatePreviewModal from '@/components/TemplatePreviewModal.vue'
+import HeaderFooterChoiceModal from '@/components/HeaderFooterChoiceModal.vue'
 
 const router = useRouter()
 const templates = ref<Template[]>([])
@@ -15,6 +16,7 @@ const formExt = ref<'docx' | 'xlsx'>('docx')
 const formEditor = ref<'onlyoffice' | 'collabora'>('onlyoffice')
 const creating = ref(false)
 const previewId = ref<string | null>(null)
+const previewMode = ref<HeaderFooterMode>('preserve')
 const renaming = ref<Template | null>(null)
 const renameValue = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -61,7 +63,18 @@ function editTemplate(t: Template) {
 }
 
 function previewTemplate(t: Template) {
-  previewId.value = t.id
+  pendingChoice.value = { type: 'preview-template', id: t.id, title: `${t.name}.${t.ext}` }
+}
+
+type PendingChoice = { type: 'preview-template'; id: string; title: string }
+const pendingChoice = ref<PendingChoice | null>(null)
+
+function onChoice(mode: HeaderFooterMode) {
+  const pending = pendingChoice.value
+  pendingChoice.value = null
+  if (!pending) return
+  previewMode.value = mode
+  previewId.value = pending.id
 }
 
 function startRename(t: Template) {
@@ -191,7 +204,15 @@ function formatSize(bytes: number): string {
     <TemplatePreviewModal
       :template-id="previewId"
       :template-name="templates.find((t) => t.id === previewId)?.name"
+      :header-footer-mode="previewMode"
       @close="previewId = null"
+    />
+
+    <HeaderFooterChoiceModal
+      v-if="pendingChoice"
+      :title="pendingChoice.title"
+      @cancel="pendingChoice = null"
+      @confirm="onChoice"
     />
 
     <Teleport to="body">

@@ -20,6 +20,8 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 sha2 = "0.10"
 regex = "1"
 dotenvy = "0.15"
+qrcode = { version = "0.14", features = ["image"] }
+image = "0.25"
 
 utoipa = { version = "5", features = ["axum_extras", "macros"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

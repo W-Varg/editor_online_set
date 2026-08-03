@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json, Response},
 };
@@ -10,7 +10,7 @@ use crate::dto::{CreateTemplate, RenameTemplate};
 use crate::helpers::{config, jwt};
 use crate::models::Document;
 use crate::repos::template_repo;
-use crate::services::{converter, onlyoffice_converter, onlyoffice_service, template_service};
+use crate::services::{converter, header_footer_service, onlyoffice_converter, onlyoffice_service, template_service};
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
     jwt::extract_user(headers, &config::jwt_secret())
@@ -210,7 +210,8 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     get,
     path = "/api/templates/{id}/preview",
     params(
-        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a"),
+        ("header_footer" = Option<String>, Query, description = "Modo de encabezado/pie: `preserve` (respeta el existente, por defecto) o `replace` (inyecta el encabezado y pie editables del sistema).", example = "preserve")
     ),
     responses(
         (status = 200, description = "PDF temporal de la plantilla."),
@@ -222,12 +223,14 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     tag = "Templates",
     summary = "Previsualizar plantilla",
     description = "Genera un PDF temporal de la plantilla para la previsualización en el frontend. \
+        Si se pide `replace`, inyecta el encabezado/pie editable del sistema antes de convertir. \
         Requiere autenticación."
 )]
 pub async fn preview(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    Query(query): Query<header_footer_service::HeaderFooterQuery>,
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
     let template = match template_service::get_by_id(&state.db, &id) {
@@ -247,7 +250,16 @@ pub async fn preview(
         config::public_backend_url(8091),
         id
     );
-    match converter::content_to_pdf(&state, &doc, &content, &user.sub, &user.name, Some(fallback_source_url)).await {
+    match converter::content_to_pdf(
+        &state,
+        &doc,
+        &content,
+        &user.sub,
+        &user.name,
+        Some(fallback_source_url),
+        query.mode(),
+    )
+    .await {
         Ok(pdf) => pdf_response(pdf),
         Err(error) => {
             tracing::error!("Previsualización de plantilla fallida para {}: {}", id, error);

@@ -82,7 +82,7 @@ const Utils = {
     },
     /** @param {string} url @returns {boolean} */
     validateYoutubeUrl: function(url) {
-        var p = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|\?v=)([^#\&\?]*).*/;
+        var p = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|\?v=)([^#&?]*).*/;
         var match = url.match(p);
         return (match && match[2] && match[2].length == 11) ? true : false;
     }

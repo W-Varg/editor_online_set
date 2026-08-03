@@ -6,5 +6,6 @@ pub mod onlyoffice_service;
 pub mod onlyoffice_converter;
 pub mod collabora_converter;
 pub mod tag_service;
+pub mod header_footer_service;
 pub mod template_service;
 pub mod converter;

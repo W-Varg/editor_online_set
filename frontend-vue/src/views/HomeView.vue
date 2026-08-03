@@ -3,9 +3,10 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { listDocuments, createDocument, deleteDocument, convertToPdf, listTemplates } from '@/services/api'
-import type { Document, Template } from '@/services/types'
+import type { Document, Template, HeaderFooterMode } from '@/services/types'
 import DocumentsTable from '@/components/DocumentsTable.vue'
 import TemplatePreviewModal from '@/components/TemplatePreviewModal.vue'
+import HeaderFooterChoiceModal from '@/components/HeaderFooterChoiceModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -22,9 +23,18 @@ const creating = ref(false)
 const converting = ref<string | null>(null)
 const previewing = ref<string | null>(null)
 const templatePreviewId = ref<string | null>(null)
+const templatePreviewMode = ref<HeaderFooterMode>('preserve')
 const activeTab = ref<'mine' | 'shared'>('mine')
 const toast = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
+
+type PendingChoice =
+  | { type: 'preview-doc'; id: string }
+  | { type: 'convert'; id: string }
+  | { type: 'preview-template'; id: string }
+
+const pendingChoice = ref<PendingChoice | null>(null)
+const choiceTitle = ref('')
 
 onMounted(async () => {
   await loadDocs()
@@ -81,7 +91,10 @@ function selectedTemplate(): Template | undefined {
 }
 
 function previewSelectedTemplate() {
-  if (formTemplateId.value) templatePreviewId.value = formTemplateId.value
+  const t = selectedTemplate()
+  if (formTemplateId.value && t) {
+    askHeaderFooter('preview-template', formTemplateId.value, `${t.name}.${t.ext}`)
+  }
 }
 
 async function handleDelete(doc: Document) {
@@ -98,11 +111,11 @@ async function handleDelete(doc: Document) {
   }
 }
 
-async function handleConvert(id: string) {
+async function handleConvert(id: string, mode: HeaderFooterMode = 'preserve') {
   converting.value = id
   error.value = ''
   try {
-    await convertToPdf(id)
+    await convertToPdf(id, mode)
     await loadDocs()
     showToast('Documento convertido a PDF correctamente')
   } catch (e) {
@@ -126,11 +139,36 @@ function editUrl(doc: Document): string {
     : `/editor/collabora/${doc.id}`
 }
 
-function previewDocument(id: string) {
-  previewing.value = id
-  router.push(`/preview/${id}`).finally(() => {
-    previewing.value = null
-  })
+function askHeaderFooter(type: PendingChoice['type'], id: string, title: string) {
+  choiceTitle.value = title
+  pendingChoice.value = { type, id } as PendingChoice
+}
+
+function askPreviewDocument(id: string) {
+  const doc = docs.value.find((d) => d.id === id)
+  askHeaderFooter('preview-doc', id, doc ? `${doc.name}.${doc.ext}` : 'Documento')
+}
+
+function askConvert(id: string) {
+  const doc = docs.value.find((d) => d.id === id)
+  askHeaderFooter('convert', id, doc ? `${doc.name}.${doc.ext}` : 'Documento')
+}
+
+function onChoice(mode: HeaderFooterMode) {
+  const pending = pendingChoice.value
+  pendingChoice.value = null
+  if (!pending) return
+  if (pending.type === 'preview-doc') {
+    previewing.value = pending.id
+    router.push(`/preview/${pending.id}?header_footer=${mode}`).finally(() => {
+      previewing.value = null
+    })
+  } else if (pending.type === 'convert') {
+    handleConvert(pending.id, mode)
+  } else {
+    templatePreviewMode.value = mode
+    templatePreviewId.value = pending.id
+  }
 }
 </script>
 
@@ -197,15 +235,23 @@ function previewDocument(id: string) {
       :previewing="previewing"
       @switch-tab="switchTab"
       @edit="router.push(editUrl($event))"
-      @convert="handleConvert"
-      @preview="previewDocument"
+      @convert="askConvert"
+      @preview="askPreviewDocument"
       @delete="handleDelete"
     />
 
     <TemplatePreviewModal
       :template-id="templatePreviewId"
       :template-name="selectedTemplate()?.name"
+      :header-footer-mode="templatePreviewMode"
       @close="templatePreviewId = null"
+    />
+
+    <HeaderFooterChoiceModal
+      v-if="pendingChoice"
+      :title="choiceTitle"
+      @cancel="pendingChoice = null"
+      @confirm="onChoice"
     />
   </div>
 </template>

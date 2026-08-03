@@ -6,6 +6,8 @@ export interface User {
   cargo?: string
 }
 
+export type HeaderFooterMode = 'preserve' | 'replace'
+
 export interface AuthResponse {
   token: string
   user: User

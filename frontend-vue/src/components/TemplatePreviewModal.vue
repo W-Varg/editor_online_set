@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { previewTemplate } from '@/services/api'
+import type { HeaderFooterMode } from '@/services/types'
 
 const props = defineProps<{
   templateId: string | null
   templateName?: string
+  headerFooterMode?: HeaderFooterMode
 }>()
 
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -14,15 +16,15 @@ const error = ref('')
 const pdfUrl = ref('')
 
 watch(
-  () => props.templateId,
-  async (id) => {
+  () => [props.templateId, props.headerFooterMode],
+  async ([id]) => {
     if (!id) return
     loading.value = true
     error.value = ''
     if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value)
     pdfUrl.value = ''
     try {
-      const blob = await previewTemplate(id)
+      const blob = await previewTemplate(id, props.headerFooterMode ?? 'preserve')
       pdfUrl.value = URL.createObjectURL(blob)
     } catch (reason) {
       error.value = reason instanceof Error ? reason.message : String(reason)

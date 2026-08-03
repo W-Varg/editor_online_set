@@ -38,7 +38,7 @@
 		window.Asc.plugin.init = function(text)
 		{
 			if (!YT) {
-				document.getElementsByTagName('body')[0].innerHTML = "<p id='message' style='text-align:center; font-size:12pt;'>" + window.Asc.plugin.tr("This service isn't available in your region.") + "<\/p>";
+				document.getElementsByTagName('body')[0].innerHTML = "<p id='message' style='text-align:center; font-size:12pt;'>" + window.Asc.plugin.tr("This service isn't available in your region.") + "</p>";
 				return;
 			}
 

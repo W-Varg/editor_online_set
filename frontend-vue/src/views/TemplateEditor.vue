@@ -7,6 +7,8 @@ import { useTheme } from '@/composables/useTheme'
 import { useCollaboraTags } from '@/composables/useCollaboraTags'
 import TagsModal from '@/components/TagsModal.vue'
 import TemplatePreviewModal from '@/components/TemplatePreviewModal.vue'
+import HeaderFooterChoiceModal from '@/components/HeaderFooterChoiceModal.vue'
+import type { HeaderFooterMode } from '@/services/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +29,8 @@ const rawIframeUrl = ref('')
 const templateName = ref('')
 const showTagsModal = ref(false)
 const showPreviewModal = ref(false)
+const previewMode = ref<HeaderFooterMode>('preserve')
+const showChoiceModal = ref(false)
 const toast = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -131,6 +135,16 @@ function showToast(message: string) {
     toast.value = ''
   }, 4000)
 }
+
+function askPreview() {
+  showChoiceModal.value = true
+}
+
+function onChoice(mode: HeaderFooterMode) {
+  showChoiceModal.value = false
+  previewMode.value = mode
+  showPreviewModal.value = true
+}
 </script>
 
 <template>
@@ -140,7 +154,7 @@ function showToast(message: string) {
       <span class="toolbar-title">Editar plantilla{{ templateName ? `: ${templateName}` : '' }}</span>
       <div v-if="editorKind === 'collabora'" class="toolbar-actions">
         <button class="btn-tags" @click="showTagsModal = true">Etiquetas</button>
-        <button class="btn-preview" @click="showPreviewModal = true">Previsualizar</button>
+        <button class="btn-preview" @click="askPreview">Previsualizar</button>
       </div>
     </div>
     <div v-if="loading" class="status">
@@ -166,7 +180,14 @@ function showToast(message: string) {
     <TemplatePreviewModal
       :template-id="showPreviewModal ? (route.params.id as string) : null"
       :template-name="templateName"
+      :header-footer-mode="previewMode"
       @close="showPreviewModal = false"
+    />
+    <HeaderFooterChoiceModal
+      v-if="showChoiceModal"
+      :title="templateName || 'Plantilla'"
+      @cancel="showChoiceModal = false"
+      @confirm="onChoice"
     />
     <div v-if="toast" class="success-toast" role="status">{{ toast }}</div>
   </div>

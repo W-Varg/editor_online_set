@@ -2,6 +2,8 @@ const APP_HOST = window.location.hostname || 'localhost'
 const APP_PROTOCOL = window.location.protocol || 'http:'
 const API_BASE = `${APP_PROTOCOL}//${APP_HOST}:8091`
 
+import type { HeaderFooterMode } from './types'
+
 function headers() {
   const token = localStorage.getItem('token') || ''
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -55,8 +57,8 @@ export async function deleteDocument(id: string) {
   return res.json()
 }
 
-export async function convertToPdf(id: string) {
-  const res = await fetch(`${API_BASE}/api/documents/${id}/convert`, {
+export async function convertToPdf(id: string, headerFooter: HeaderFooterMode = 'preserve') {
+  const res = await fetch(`${API_BASE}/api/documents/${id}/convert?header_footer=${headerFooter}`, {
     method: 'POST',
     headers: headers(),
   })
@@ -67,8 +69,8 @@ export async function convertToPdf(id: string) {
   return res.json()
 }
 
-export async function previewDocument(id: string): Promise<Blob> {
-  const res = await fetch(`${API_BASE}/api/documents/${id}/preview`, {
+export async function previewDocument(id: string, headerFooter: HeaderFooterMode = 'preserve'): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/documents/${id}/preview?header_footer=${headerFooter}`, {
     headers: headers(),
   })
   if (!res.ok) {
@@ -139,8 +141,8 @@ export async function deleteTemplate(id: string) {
   return res.json()
 }
 
-export async function previewTemplate(id: string): Promise<Blob> {
-  const res = await fetch(`${API_BASE}/api/templates/${id}/preview`, {
+export async function previewTemplate(id: string, headerFooter: HeaderFooterMode = 'preserve'): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/templates/${id}/preview?header_footer=${headerFooter}`, {
     headers: headers(),
   })
   if (!res.ok) {

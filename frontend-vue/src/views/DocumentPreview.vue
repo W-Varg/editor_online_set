@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { previewDocument } from '@/services/api'
+import type { HeaderFooterMode } from '@/services/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,8 +11,9 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
+  const mode = (route.query.header_footer as HeaderFooterMode | undefined) ?? 'preserve'
   try {
-    const blob = await previewDocument(route.params.id as string)
+    const blob = await previewDocument(route.params.id as string, mode)
     pdfUrl.value = URL.createObjectURL(blob)
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : String(reason)

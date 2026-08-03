@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::AppState;
 use crate::dto::{CreateDocument, ConvertResponse};
 use crate::helpers::{config, jwt, url};
-use crate::services::{collabora_converter, converter, document_service, onlyoffice_converter};
+use crate::services::{collabora_converter, converter, document_service, header_footer_service, onlyoffice_converter};
 use crate::repos::document_repo;
 
 fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
@@ -190,7 +190,8 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     post,
     path = "/api/documents/{id}/convert",
     params(
-        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("header_footer" = Option<String>, Query, description = "Modo de encabezado/pie: `preserve` (respeta el existente, por defecto) o `replace` (inyecta el encabezado y pie editables del sistema).", example = "preserve")
     ),
     responses(
         (status = 200, description = "Resultado de la conversión a PDF.", body = ConvertResponse),
@@ -207,6 +208,7 @@ pub async fn convert_to_pdf(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    Query(query): Query<header_footer_service::HeaderFooterQuery>,
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
     let doc = match document_service::get_by_id(&state.db, &id) {
@@ -230,7 +232,10 @@ pub async fn convert_to_pdf(
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
 
-    let pdf_bytes = match converter::content_to_pdf(&state, &doc, &content, &user.sub, &user.name, None).await {
+    let pdf_bytes = match converter::content_to_pdf(
+        &state, &doc, &content, &user.sub, &user.name, None, query.mode(),
+    )
+    .await {
         Ok(pdf) => pdf,
         Err(error) => {
             tracing::error!("Conversión {} fallida para {}: {}", doc.editor, id, error);
@@ -251,7 +256,8 @@ pub async fn convert_to_pdf(
     get,
     path = "/api/documents/{id}/preview",
     params(
-        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("header_footer" = Option<String>, Query, description = "Modo de encabezado/pie: `preserve` (respeta el existente, por defecto) o `replace` (inyecta el encabezado y pie editables del sistema).", example = "preserve")
     ),
     responses(
         (status = 200, description = "PDF temporal de previsualización. Resuelve las etiquetas del contenido antes de convertir."),
@@ -262,13 +268,15 @@ pub async fn convert_to_pdf(
     tag = "Documents",
     summary = "Previsualizar documento",
     description = "Genera un PDF temporal del documento para la previsualización en el frontend. \
-        Antes de convertir, resuelve las etiquetas `{{ clave }}` por sus valores reales. \
+        Antes de convertir, inyecta el encabezado/pie si se pide `replace` y resuelve \
+        las etiquetas `{{ clave }}` por sus valores reales. \
         Requiere ser propietario o tener acceso compartido."
 )]
 pub async fn preview(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    Query(query): Query<header_footer_service::HeaderFooterQuery>,
 ) -> Response {
     let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
     let doc = match document_service::get_by_id(&state.db, &id) {
@@ -289,7 +297,7 @@ pub async fn preview(
         Some(content) => content,
         None => return (StatusCode::NOT_FOUND, "Contenido del documento no encontrado").into_response(),
     };
-    match converter::content_to_pdf(&state, &doc, &content, &user.sub, &user.name, None).await {
+    match converter::content_to_pdf(&state, &doc, &content, &user.sub, &user.name, None, query.mode()).await {
         Ok(pdf) => pdf_response(pdf, true),
         Err(error) => {
             tracing::error!("Previsualización {} fallida para {}: {}", doc.editor, id, error);

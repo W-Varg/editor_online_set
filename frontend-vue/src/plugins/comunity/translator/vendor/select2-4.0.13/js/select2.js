@@ -750,7 +750,7 @@
 		return markup;
 	  }
   
-	  return String(markup).replace(/[&<>"'\/\\]/g, function (match) {
+	  return String(markup).replace(/[&<>"'/\\]/g, function (match) {
 		return replaceMap[match];
 	  });
 	};

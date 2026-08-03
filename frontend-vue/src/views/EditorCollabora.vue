@@ -14,6 +14,8 @@ import { useTheme } from '@/composables/useTheme'
 import { useCollaboraTags } from '@/composables/useCollaboraTags'
 import { useAuthStore } from '@/stores/auth'
 import TagsModal from '@/components/TagsModal.vue'
+import HeaderFooterChoiceModal from '@/components/HeaderFooterChoiceModal.vue'
+import type { HeaderFooterMode } from '@/services/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,6 +34,7 @@ const rawIframeUrl = ref('')
 const collaboraIframe = ref<HTMLIFrameElement | null>(null)
 const isOwner = ref(true)
 const showTagsModal = ref(false)
+const showChoiceModal = ref(false)
 const toast = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -139,6 +142,15 @@ function showToast(message: string) {
     toast.value = ''
   }, 4000)
 }
+
+function askPreview() {
+  showChoiceModal.value = true
+}
+
+function onChoice(mode: HeaderFooterMode) {
+  showChoiceModal.value = false
+  router.push(`/preview/${docId}?header_footer=${mode}`)
+}
 </script>
 
 <template>
@@ -147,7 +159,7 @@ function showToast(message: string) {
       <button class="btn-back" @click="router.push('/')">← Volver</button>
       <button v-if="isOwner" class="btn-share" @click="openShareModal">Compartir</button>
       <button class="btn-tags" @click="showTagsModal = true">Etiquetas</button>
-      <button class="btn-preview" @click="router.push(`/preview/${docId}`)">Previsualizar</button>
+      <button class="btn-preview" @click="askPreview">Previsualizar</button>
     </div>
     <div v-if="loading" class="status">Iniciando sesión de Collabora...</div>
     <div v-if="error" class="status error">{{ error }}</div>
@@ -165,6 +177,13 @@ function showToast(message: string) {
       title="Insertar etiqueta en el documento"
       @close="showTagsModal = false"
       @select="onSelectTag"
+    />
+
+    <HeaderFooterChoiceModal
+      v-if="showChoiceModal"
+      title="Documento"
+      @cancel="showChoiceModal = false"
+      @confirm="onChoice"
     />
 
     <div v-if="toast" class="success-toast" role="status">{{ toast }}</div>
