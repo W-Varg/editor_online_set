@@ -1,30 +1,32 @@
-mod models;
-mod dto;
+mod controllers;
 mod db;
+mod dto;
+mod helpers;
+mod models;
+mod openapi;
 mod repos;
 mod services;
-mod controllers;
-mod helpers;
-mod openapi;
 pub mod templates;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    http::HeaderMap,
-    response::{Json, Redirect},
+    extract::{Extension, Path},
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Json, Response},
     routing::{delete, get, post},
     Router,
 };
-use utoipa::OpenApi;
-use utoipa_scalar::{Scalar, Servable};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing_subscriber::EnvFilter;
+use utoipa::OpenApi;
+use utoipa_scalar::{Scalar, Servable};
+use utoipa_swagger_ui::{Config, Url};
 
+use crate::dto::system::{HealthResponse, RootResponse};
 use db::DbConn;
 use openapi::ApiDoc;
-use crate::dto::system::{HealthResponse, RootResponse};
 
 /// Contenido de un documento con las etiquetas ya resueltas, registrado con un
 /// token de un solo uso para que el convertidor de ONLYOFFICE pueda descargarlo
@@ -66,7 +68,10 @@ async fn discover_collab_prefix(base_url: &str) -> String {
             String::new()
         }
         Err(e) => {
-            tracing::warn!("Failed to fetch Collabora discovery ({}), using loleaflet fallback", e);
+            tracing::warn!(
+                "Failed to fetch Collabora discovery ({}), using loleaflet fallback",
+                e
+            );
             String::new()
         }
     }
@@ -82,7 +87,10 @@ async fn discover_collab_prefix(base_url: &str) -> String {
     )
 )]
 async fn root_handler(headers: HeaderMap) -> Json<RootResponse> {
-    let host = headers.get("host").and_then(|v| v.to_str().ok()).unwrap_or("localhost");
+    let host = headers
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("localhost");
     Json(RootResponse {
         status: "ok".to_string(),
         server: "editor-online-backend".to_string(),
@@ -106,13 +114,25 @@ async fn health_handler() -> Json<HealthResponse> {
     })
 }
 
-async fn api_docs_redirect() -> Redirect {
-    Redirect::temporary("/scalar")
+/// Sirve la interfaz Swagger UI y sus recursos en `/api`, sin redirecciones.
+async fn swagger_ui(
+    path: Option<Path<String>>,
+    Extension(config): Extension<Arc<Config<'static>>>,
+) -> Response {
+    let tail = path.map(|p| p.0).unwrap_or_default();
+    match utoipa_swagger_ui::serve(&tail, config) {
+        Ok(Some(file)) => (
+            [(axum::http::header::CONTENT_TYPE, file.content_type.as_str())],
+            file.bytes.to_vec(),
+        )
+            .into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Not found").into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error").into_response(),
+    }
 }
 
-/// Sirve el documento OpenAPI en formato JSON puro, para herramientas externas
-/// (clientes HTTP, generadores de código, etc.). Scalar incrusta este mismo spec
-/// de forma inline en su interfaz.
+/// Sirve el documento OpenAPI en formato JSON puro, para la propia UI de Swagger
+/// y para herramientas externas (clientes HTTP, generadores de código, etc.).
 #[utoipa::path(
     get,
     path = "/api-docs/openapi.json",
@@ -139,7 +159,8 @@ async fn main() {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8091".to_string());
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "my-secret-key".to_string());
-    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://host.docker.internal:8091".to_string());
+    let backend_url = std::env::var("BACKEND_URL")
+        .unwrap_or_else(|_| "http://host.docker.internal:8091".to_string());
     let data_dir = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
     let public_dir = std::env::var("PUBLIC_DIR")
         .map(std::path::PathBuf::from)
@@ -166,7 +187,8 @@ async fn main() {
     db::migrations::run_migrations(&db.lock().unwrap());
     repos::user_repo::seed(&db);
 
-    let collab_url = std::env::var("COLLABORA_URL").unwrap_or_else(|_| "http://localhost:8093".to_string());
+    let collab_url =
+        std::env::var("COLLABORA_URL").unwrap_or_else(|_| "http://localhost:8093".to_string());
     let collab_browser_prefix = discover_collab_prefix(&collab_url).await;
 
     let state = AppState {
@@ -179,43 +201,145 @@ async fn main() {
         preview_sources: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    let scalar_router: Router<Arc<AppState>> = Scalar::with_url("/scalar", ApiDoc::openapi()).into();
+    let swagger_config = Arc::new(Config::new(vec![Url::new(
+        "Editor Online Backend",
+        "/api-docs/openapi.json",
+    )]));
+
+    let swagger_router: Router<Arc<AppState>> = Router::new()
+        .route("/api", get(swagger_ui))
+        .route("/api/{*tail}", get(swagger_ui))
+        .route("/api-docs/openapi.json", get(serve_api_docs))
+        .layer(Extension(swagger_config));
+
+    let scalar_router: Router<Arc<AppState>> =
+        Scalar::with_url("/scalar", ApiDoc::openapi()).into();
 
     let app = Router::new()
         .route("/", get(root_handler))
         .route("/health", get(health_handler))
-        .route("/api", get(api_docs_redirect))
-        .route("/api-docs/openapi.json", get(serve_api_docs))
         .route("/api/auth/login", post(controllers::auth_controller::login))
         .route("/api/users", get(controllers::auth_controller::list_users))
-        .route("/api/documents", get(controllers::document_controller::list).post(controllers::document_controller::create))
-        .route("/api/documents/{id}", get(controllers::document_controller::get).delete(controllers::document_controller::delete))
-        .route("/api/documents/{id}/content", get(controllers::document_controller::content))
-        .route("/api/documents/{id}/preview", get(controllers::document_controller::preview))
-        .route("/api/documents/{id}/convert", post(controllers::document_controller::convert_to_pdf))
-        .route("/api/documents/{id}/pdf", get(controllers::document_controller::get_pdf))
-        .route("/api/templates", get(controllers::template_controller::list).post(controllers::template_controller::create))
-        .route("/api/templates/{id}", get(controllers::template_controller::get).put(controllers::template_controller::rename).delete(controllers::template_controller::delete))
-        .route("/api/templates/{id}/content", get(controllers::template_controller::content))
-        .route("/api/templates/{id}/preview", get(controllers::template_controller::preview))
-        .route("/api/onlyoffice/config/template/{id}", get(controllers::template_controller::config))
-        .route("/callback/template/{id}", post(controllers::template_controller::callback))
-        .route("/api/users/search", get(controllers::sharing_controller::search_users))
-        .route("/api/documents/{id}/shares", get(controllers::sharing_controller::list).post(controllers::sharing_controller::create))
-        .route("/api/documents/{id}/shares/search", get(controllers::sharing_controller::search_document_users))
-        .route("/api/documents/{id}/shares/sync", axum::routing::put(controllers::sharing_controller::sync))
-        .route("/api/documents/{id}/shares/{user_id}", delete(controllers::sharing_controller::remove))
+        .route(
+            "/api/documents",
+            get(controllers::document_controller::list)
+                .post(controllers::document_controller::create),
+        )
+        .route(
+            "/api/documents/{id}",
+            get(controllers::document_controller::get)
+                .delete(controllers::document_controller::delete),
+        )
+        .route(
+            "/api/documents/{id}/content",
+            get(controllers::document_controller::content),
+        )
+        .route(
+            "/api/documents/{id}/preview",
+            get(controllers::document_controller::preview),
+        )
+        .route(
+            "/api/documents/{id}/convert",
+            post(controllers::document_controller::convert_to_pdf),
+        )
+        .route(
+            "/api/documents/{id}/pdf",
+            get(controllers::document_controller::get_pdf),
+        )
+        .route(
+            "/api/templates",
+            get(controllers::template_controller::list)
+                .post(controllers::template_controller::create),
+        )
+        .route(
+            "/api/templates/{id}",
+            get(controllers::template_controller::get)
+                .put(controllers::template_controller::rename)
+                .delete(controllers::template_controller::delete),
+        )
+        .route(
+            "/api/templates/{id}/content",
+            get(controllers::template_controller::content),
+        )
+        .route(
+            "/api/templates/{id}/preview",
+            get(controllers::template_controller::preview),
+        )
+        .route(
+            "/api/onlyoffice/config/template/{id}",
+            get(controllers::template_controller::config),
+        )
+        .route(
+            "/callback/template/{id}",
+            post(controllers::template_controller::callback),
+        )
+        .route(
+            "/api/users/search",
+            get(controllers::sharing_controller::search_users),
+        )
+        .route(
+            "/api/documents/{id}/shares",
+            get(controllers::sharing_controller::list)
+                .post(controllers::sharing_controller::create),
+        )
+        .route(
+            "/api/documents/{id}/shares/search",
+            get(controllers::sharing_controller::search_document_users),
+        )
+        .route(
+            "/api/documents/{id}/shares/sync",
+            axum::routing::put(controllers::sharing_controller::sync),
+        )
+        .route(
+            "/api/documents/{id}/shares/{user_id}",
+            delete(controllers::sharing_controller::remove),
+        )
         .route("/api/tags", get(controllers::tag_controller::list_tags))
-        .route("/api/preview-source/{token}", get(controllers::tag_controller::preview_source))
-        .route("/api/collabora/session/{id}", get(controllers::collabora_controller::session))
-        .route("/api/collabora/config/template/{id}", get(controllers::collabora_controller::template_session))
-        .route("/wopi/files/{id}", get(controllers::collabora_controller::check_file_info).post(controllers::collabora_controller::file_ops))
-        .route("/wopi/files/{id}/contents", get(controllers::collabora_controller::get_file).post(controllers::collabora_controller::put_file))
-        .route("/wopi/templates/{id}", get(controllers::collabora_controller::template_check_file_info).post(controllers::collabora_controller::template_file_ops))
-        .route("/wopi/templates/{id}/contents", get(controllers::collabora_controller::template_get_file).post(controllers::collabora_controller::template_put_file))
-        .route("/api/onlyoffice/config/{id}", get(controllers::onlyoffice_controller::config))
-        .route("/download/{id}", get(controllers::document_controller::download))
-        .route("/callback/onlyoffice/{id}", post(controllers::onlyoffice_controller::callback))
+        .route(
+            "/api/preview-source/{token}",
+            get(controllers::tag_controller::preview_source),
+        )
+        .route(
+            "/api/collabora/session/{id}",
+            get(controllers::collabora_controller::session),
+        )
+        .route(
+            "/api/collabora/config/template/{id}",
+            get(controllers::collabora_controller::template_session),
+        )
+        .route(
+            "/wopi/files/{id}",
+            get(controllers::collabora_controller::check_file_info)
+                .post(controllers::collabora_controller::file_ops),
+        )
+        .route(
+            "/wopi/files/{id}/contents",
+            get(controllers::collabora_controller::get_file)
+                .post(controllers::collabora_controller::put_file),
+        )
+        .route(
+            "/wopi/templates/{id}",
+            get(controllers::collabora_controller::template_check_file_info)
+                .post(controllers::collabora_controller::template_file_ops),
+        )
+        .route(
+            "/wopi/templates/{id}/contents",
+            get(controllers::collabora_controller::template_get_file)
+                .post(controllers::collabora_controller::template_put_file),
+        )
+        .route(
+            "/api/onlyoffice/config/{id}",
+            get(controllers::onlyoffice_controller::config),
+        )
+        .route(
+            "/download/{id}",
+            get(controllers::document_controller::download),
+        )
+        .route(
+            "/callback/onlyoffice/{id}",
+            post(controllers::onlyoffice_controller::callback),
+        )
+        .merge(swagger_router)
         .merge(scalar_router)
         .nest_service("/plugins", ServeDir::new(plugins_dir))
         .layer(CorsLayer::permissive())
@@ -225,7 +349,8 @@ async fn main() {
     tracing::info!("Backend starting on {}", addr);
 
     println!("🚀 Servidor Rust + Axum escuchando en el puerto {port}");
-    println!("📘 Documentación Scalar disponible en http://localhost:{port}/api");
+    println!("📘 Documentación Swagger disponible en http://localhost:{port}/api/index.html");
+    println!("📖 Documentación Scalar disponible en http://localhost:{port}/scalar");
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

@@ -22,4 +22,5 @@ regex = "1"
 dotenvy = "0.15"
 
 utoipa = { version = "5", features = ["axum_extras", "macros"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
 utoipa-scalar = { version = "0.3", features = ["axum"] }
