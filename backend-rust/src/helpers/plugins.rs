@@ -102,15 +102,19 @@ pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
     // `autostart: false`: el plugin queda disponible en la pestaña "Plugins"
     // (se "carga por defecto" al abrir el editor) pero el sidebar NO se abre
     // solo; se muestra al hacer clic en el plugin.
-    CustomPlugin {
-        id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}",
-        name: "Saludar",
-        dir: "saludar",
-        editors: &["word", "cell", "slide"],
-        autostart: false,
-        requires_owner: false,
-        options: None,
-    },
+    //
+    // Desactivado: se conserva el código del plugin (public/plugins/saludar/)
+    // pero se retira del catálogo de plugins por defecto (no se inyecta).
+    // CustomPlugin {
+    //     id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000002}",
+    //     name: "Saludar",
+    //     dir: "saludar",
+    //     editors: &["word", "cell", "slide"],
+    //     autostart: false,
+    //     requires_owner: false,
+    //     options: None,
+    // },
+
     // Plugin "Compartir": sidebar para buscar usuarios por DNI/nombre y otorgar
     // o revocar acceso al documento. Vive en public/plugins/compartir/.
     //
@@ -141,14 +145,15 @@ pub const CUSTOM_PLUGINS: &[CustomPlugin] = &[
     // {{key}} ya resueltas, igual que la vista previa de la lista de documentos.
     // Vive en public/plugins/previsualizar/.
     //
-    // `autostart: true`: arranca automáticamente al abrir el editor y muestra el
-    // panel lateral (derecho) con el botón "Previsualizar" y su icono PDF.
+    // `autostart: false`: el plugin queda disponible en la pestaña "Plugins" (se
+    // "carga por defecto" al abrir el editor) pero el sidebar NO se abre solo;
+    // se muestra al hacer clic en el plugin.
     CustomPlugin {
         id: "asc.{8f2a1c40-7b3d-4e21-9a6f-000000000004}",
         name: "Previsualizar",
         dir: "previsualizar",
         editors: &["word", "cell"],
-        autostart: true,
+        autostart: false,
         requires_owner: false,
         options: Some(build_previsualizar_options),
     },
