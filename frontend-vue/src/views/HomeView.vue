@@ -146,6 +146,10 @@ function askHeaderFooter(type: PendingChoice['type'], id: string, title: string)
 
 function askPreviewDocument(id: string) {
   const doc = docs.value.find((d) => d.id === id)
+  if (doc && (doc.ext === 'pdf' || doc.status === 'final')) {
+    router.push(`/preview/${id}`)
+    return
+  }
   askHeaderFooter('preview-doc', id, doc ? `${doc.name}.${doc.ext}` : 'Documento')
 }
 
