@@ -18,7 +18,7 @@ use axum::{
     Router,
 };
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_scalar::{Scalar, Servable};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing_subscriber::EnvFilter;
 
@@ -107,7 +107,22 @@ async fn health_handler() -> Json<HealthResponse> {
 }
 
 async fn api_docs_redirect() -> Redirect {
-    Redirect::temporary("/swagger-ui")
+    Redirect::temporary("/scalar")
+}
+
+/// Sirve el documento OpenAPI en formato JSON puro, para herramientas externas
+/// (clientes HTTP, generadores de código, etc.). Scalar incrusta este mismo spec
+/// de forma inline en su interfaz.
+#[utoipa::path(
+    get,
+    path = "/api-docs/openapi.json",
+    responses(
+        (status = 200, description = "Documento OpenAPI 3.0 en JSON")
+    ),
+    tag = "System"
+)]
+async fn serve_api_docs() -> Json<utoipa::openapi::OpenApi> {
+    Json(ApiDoc::openapi())
 }
 
 #[tokio::main]
@@ -164,14 +179,13 @@ async fn main() {
         preview_sources: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    let swagger_router: Router<Arc<AppState>> = SwaggerUi::new("/swagger-ui")
-        .url("/api-docs/openapi.json", ApiDoc::openapi())
-        .into();
+    let scalar_router: Router<Arc<AppState>> = Scalar::with_url("/scalar", ApiDoc::openapi()).into();
 
     let app = Router::new()
         .route("/", get(root_handler))
         .route("/health", get(health_handler))
         .route("/api", get(api_docs_redirect))
+        .route("/api-docs/openapi.json", get(serve_api_docs))
         .route("/api/auth/login", post(controllers::auth_controller::login))
         .route("/api/users", get(controllers::auth_controller::list_users))
         .route("/api/documents", get(controllers::document_controller::list).post(controllers::document_controller::create))
@@ -202,7 +216,7 @@ async fn main() {
         .route("/api/onlyoffice/config/{id}", get(controllers::onlyoffice_controller::config))
         .route("/download/{id}", get(controllers::document_controller::download))
         .route("/callback/onlyoffice/{id}", post(controllers::onlyoffice_controller::callback))
-        .merge(swagger_router)
+        .merge(scalar_router)
         .nest_service("/plugins", ServeDir::new(plugins_dir))
         .layer(CorsLayer::permissive())
         .with_state(Arc::new(state));
@@ -211,7 +225,7 @@ async fn main() {
     tracing::info!("Backend starting on {}", addr);
 
     println!("🚀 Servidor Rust + Axum escuchando en el puerto {port}");
-    println!("📘 Swagger UI disponible en http://localhost:{port}/api");
+    println!("📘 Documentación Scalar disponible en http://localhost:{port}/api");
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

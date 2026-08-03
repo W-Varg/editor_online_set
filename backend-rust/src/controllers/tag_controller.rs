@@ -17,10 +17,13 @@ fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
     get,
     path = "/api/tags",
     responses(
-        (status = 200, description = "Available document tags", body = [crate::dto::TagDefinition]),
+        (status = 200, description = "Catálogo de etiquetas disponibles para insertar en los documentos.", body = [crate::dto::TagDefinition]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Tags"
+    tag = "Tags",
+    summary = "Listar etiquetas",
+    description = "Devuelve el catálogo de etiquetas dinámicas (`{{ clave }}`) que el plugin de etiquetas puede \
+        insertar en el contenido. El backend las reemplaza por sus valores al previsualizar. Requiere autenticación."
 )]
 pub async fn list_tags(State(_state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(e) = user_or_401(&headers) {
@@ -32,12 +35,17 @@ pub async fn list_tags(State(_state): State<Arc<AppState>>, headers: HeaderMap) 
 #[utoipa::path(
     get,
     path = "/api/preview-source/{token}",
-    params(("token" = String, Path, description = "One-time token for resolved document content")),
+    params(
+        ("token" = String, Path, description = "Token de un solo uso del contenido del documento con las etiquetas ya resueltas.", example = "a1b2c3d4...")
+    ),
     responses(
-        (status = 200, description = "Resolved document content"),
+        (status = 200, description = "Contenido del documento con las etiquetas resueltas."),
         (status = 404, description = "Token no válido o expirado")
     ),
-    tag = "Tags"
+    tag = "Tags",
+    summary = "Obtener fuente de previsualización",
+    description = "Devuelve el contenido resuelto (etiquetas reemplazadas por valores) asociado a un token \
+        de un solo uso. Lo consume el convertidor de ONLYOFFICE; el token expira en 60 segundos."
 )]
 pub async fn preview_source(
     State(state): State<Arc<AppState>>,

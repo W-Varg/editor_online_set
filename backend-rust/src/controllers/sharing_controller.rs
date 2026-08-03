@@ -32,13 +32,15 @@ pub struct SharePayload {
     get,
     path = "/api/users/search",
     params(
-        ("q" = String, Query, description = "Text to search")
+        ("q" = String, Query, description = "Texto a buscar por nombre, DNI o nombre de usuario.", example = "ana")
     ),
     responses(
-        (status = 200, description = "Matching users", body = [crate::dto::UserSearchResult]),
+        (status = 200, description = "Usuarios que coinciden con la búsqueda.", body = [crate::dto::UserSearchResult]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Sharing"
+    tag = "Sharing",
+    summary = "Buscar usuarios",
+    description = "Busca usuarios por nombre, DNI o nombre de usuario. Excluye al usuario autenticado. Requiere autenticación."
 )]
 pub async fn search_users(
     State(state): State<Arc<AppState>>,
@@ -52,9 +54,19 @@ pub async fn search_users(
 #[utoipa::path(
     get,
     path = "/api/documents/{id}/shares/search",
-    params(("id" = String, Path, description = "Document id"), ("q" = Option<String>, Query, description = "DNI, name or username")),
-    responses((status = 200, description = "Share candidates", body = ShareSearchResponse), (status = 401, description = "Token requerido")),
-    tag = "Sharing"
+    params(
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("q" = Option<String>, Query, description = "DNI, nombre o nombre de usuario a buscar.", example = "ana")
+    ),
+    responses(
+        (status = 200, description = "Usuarios ya compartidos y candidatos encontrados.", body = ShareSearchResponse),
+        (status = 401, description = "Token requerido"),
+        (status = 403, description = "Solo el propietario puede administrar permisos")
+    ),
+    tag = "Sharing",
+    summary = "Buscar comparticiones del documento",
+    description = "Devuelve los usuarios que ya tienen acceso al documento y los candidatos que coinciden \
+        con la búsqueda para agregar nuevos. Requiere autenticación."
 )]
 pub async fn search_document_users(
     State(state): State<Arc<AppState>>,
@@ -78,10 +90,19 @@ pub async fn search_document_users(
 #[utoipa::path(
     put,
     path = "/api/documents/{id}/shares/sync",
-    params(("id" = String, Path, description = "Document id")),
+    params(
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
+    ),
     request_body = ShareSyncRequest,
-    responses((status = 200, description = "Shares synchronized", body = [crate::dto::ShareResponse]), (status = 400, description = "Invalid share update")),
-    tag = "Sharing"
+    responses(
+        (status = 200, description = "Comparticiones actualizadas. Devuelve la lista completa.", body = [crate::dto::ShareResponse]),
+        (status = 400, description = "Actualización de comparticiones inválida"),
+        (status = 401, description = "Token requerido")
+    ),
+    tag = "Sharing",
+    summary = "Sincronizar comparticiones",
+    description = "Aplica en lote los cambios de compartición: agrega y/o revoca accesos de una sola vez. \
+        Devuelve la lista actualizada de comparticiones. Requiere autenticación."
 )]
 pub async fn sync(
     State(state): State<Arc<AppState>>,
@@ -100,15 +121,17 @@ pub async fn sync(
     post,
     path = "/api/documents/{id}/shares",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     request_body = SharePayload,
     responses(
-        (status = 201, description = "Share created", body = crate::dto::ShareResponse),
-        (status = 400, description = "Invalid share request"),
+        (status = 201, description = "Compartición creada.", body = crate::dto::ShareResponse),
+        (status = 400, description = "Solicitud de compartición inválida"),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Sharing"
+    tag = "Sharing",
+    summary = "Compartir documento",
+    description = "Comparte el documento con otro usuario otorgándole acceso. Requiere ser propietario."
 )]
 pub async fn create(
     State(state): State<Arc<AppState>>,
@@ -127,13 +150,15 @@ pub async fn create(
     get,
     path = "/api/documents/{id}/shares",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Current shares", body = [crate::dto::ShareResponse]),
+        (status = 200, description = "Comparticiones actuales del documento.", body = [crate::dto::ShareResponse]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Sharing"
+    tag = "Sharing",
+    summary = "Listar comparticiones",
+    description = "Devuelve la lista de usuarios con los que está compartido el documento. Requiere autenticación."
 )]
 pub async fn list(
     State(state): State<Arc<AppState>>,
@@ -148,15 +173,17 @@ pub async fn list(
     delete,
     path = "/api/documents/{id}/shares/{user_id}",
     params(
-        ("id" = String, Path, description = "Document id"),
-        ("user_id" = String, Path, description = "User id to unshare")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("user_id" = String, Path, description = "Identificador del usuario al que se revocará el acceso.", example = "2")
     ),
     responses(
-        (status = 200, description = "Share removed"),
-        (status = 404, description = "Share not found"),
-        (status = 401, description = "Token requerido")
+        (status = 200, description = "Acceso revocado."),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Compartición no encontrada")
     ),
-    tag = "Sharing"
+    tag = "Sharing",
+    summary = "Revocar compartición",
+    description = "Elimina el acceso de un usuario a un documento. Requiere autenticación."
 )]
 pub async fn remove(
     State(state): State<Arc<AppState>>,

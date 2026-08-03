@@ -1,11 +1,25 @@
 use utoipa::OpenApi;
-use crate::{__path_health_handler, __path_root_handler};
+use crate::{__path_health_handler, __path_root_handler, __path_serve_api_docs};
 
 #[derive(OpenApi)]
 #[openapi(
+    info(
+        title = "Editor Online Backend",
+        description = "API del gestor de documentos en línea. Permite autenticación, \
+            gestión de documentos y plantillas, edición con ONLYOFFICE y Collabora \
+            (vía WOPI), uso compartido entre usuarios, conversión a PDF y el catálogo \
+            de etiquetas reemplazables en el contenido.\n\n\
+            Todos los endpoints que operan sobre datos de usuario requieren el header \
+            `Authorization: Bearer <token>` obtenido desde `POST /api/auth/login`.",
+        version = env!("CARGO_PKG_VERSION")
+    ),
+    servers(
+        (url = "/", description = "Servidor local")
+    ),
     paths(
         root_handler,
         health_handler,
+        serve_api_docs,
         crate::controllers::auth_controller::login,
         crate::controllers::document_controller::list,
         crate::controllers::document_controller::create,
@@ -27,9 +41,11 @@ use crate::{__path_health_handler, __path_root_handler};
         crate::controllers::collabora_controller::check_file_info,
         crate::controllers::collabora_controller::get_file,
         crate::controllers::collabora_controller::file_ops,
+        crate::controllers::collabora_controller::put_file,
         crate::controllers::collabora_controller::template_check_file_info,
         crate::controllers::collabora_controller::template_get_file,
         crate::controllers::collabora_controller::template_file_ops,
+        crate::controllers::collabora_controller::template_put_file,
         crate::controllers::onlyoffice_controller::config,
         crate::controllers::onlyoffice_controller::callback,
         crate::controllers::tag_controller::list_tags,

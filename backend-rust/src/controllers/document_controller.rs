@@ -25,13 +25,16 @@ pub struct DocQuery {
     get,
     path = "/api/documents",
     params(
-        ("tab" = Option<String>, Query, description = "mine or shared")
+        ("tab" = Option<String>, Query, description = "Filtro de documentos: `mine` (propios, por defecto) o `shared` (compartidos conmigo).", example = "mine")
     ),
     responses(
-        (status = 200, description = "Document list", body = [crate::dto::DocumentResponse]),
+        (status = 200, description = "Lista de documentos del usuario según la pestaña.", body = [crate::dto::DocumentResponse]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Listar documentos",
+    description = "Devuelve los documentos del usuario actual. Con `tab=mine` lista los propios; con `tab=shared` \
+        los documentos que otros usuarios compartieron con él. Requiere autenticación."
 )]
 pub async fn list(
     State(state): State<Arc<AppState>>,
@@ -54,11 +57,14 @@ pub async fn list(
     path = "/api/documents",
     request_body = CreateDocument,
     responses(
-        (status = 201, description = "Document created", body = crate::dto::DocumentResponse),
-        (status = 400, description = "Invalid document request"),
+        (status = 201, description = "Documento creado correctamente.", body = crate::dto::DocumentResponse),
+        (status = 400, description = "Solicitud de documento inválida"),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Crear documento",
+    description = "Crea un nuevo documento en blanco (o a partir de una plantilla con `template_id`) \
+        y devuelve sus metadatos. Requiere autenticación."
 )]
 pub async fn create(
     State(state): State<Arc<AppState>>,
@@ -85,13 +91,15 @@ pub async fn create(
     get,
     path = "/api/documents/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Document", body = crate::dto::DocumentResponse),
-        (status = 404, description = "Document not found")
+        (status = 200, description = "Metadatos del documento.", body = crate::dto::DocumentResponse),
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Obtener documento",
+    description = "Devuelve los metadatos de un documento por su id."
 )]
 pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     match document_service::get_by_id(&state.db, &id) {
@@ -104,14 +112,16 @@ pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> 
     delete,
     path = "/api/documents/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Delete result", body = crate::dto::DeleteResponse),
+        (status = 200, description = "Resultado de la eliminación.", body = crate::dto::DeleteResponse),
         (status = 401, description = "Token requerido"),
-        (status = 500, description = "Delete failed")
+        (status = 500, description = "Error al eliminar el documento")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Eliminar documento",
+    description = "Elimina el documento y su archivo en disco. Solo el propietario puede eliminarlo. Requiere autenticación."
 )]
 pub async fn delete(
     State(state): State<Arc<AppState>>,
@@ -129,13 +139,15 @@ pub async fn delete(
     get,
     path = "/download/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Raw document content"),
-        (status = 404, description = "Not found")
+        (status = 200, description = "Contenido binario original del documento."),
+        (status = 404, description = "No encontrado")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Descargar documento",
+    description = "Descarga el archivo binario original del documento. No requiere autenticación."
 )]
 pub async fn download(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let doc = match document_service::get_by_id(&state.db, &id) {
@@ -153,13 +165,15 @@ pub async fn download(State(state): State<Arc<AppState>>, Path(id): Path<String>
     get,
     path = "/api/documents/{id}/content",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Raw document content"),
-        (status = 404, description = "Document not found")
+        (status = 200, description = "Contenido binario del documento."),
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Obtener contenido",
+    description = "Devuelve el contenido binario del documento. Lo usan los editores y el convertidor."
 )]
 pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let content = match document_repo::read_file(&state.db_path, &id) {
@@ -176,14 +190,18 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     post,
     path = "/api/documents/{id}/convert",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "PDF conversion result", body = ConvertResponse),
+        (status = 200, description = "Resultado de la conversión a PDF.", body = ConvertResponse),
         (status = 401, description = "Token requerido"),
-        (status = 404, description = "Document not found")
+        (status = 404, description = "Documento no encontrado"),
+        (status = 502, description = "Error del servicio de conversión")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Convertir a PDF",
+    description = "Convierte el documento a PDF (vía ONLYOFFICE o Collabora según el editor) y guarda el resultado. \
+        Solo el propietario puede convertir. Requiere autenticación."
 )]
 pub async fn convert_to_pdf(
     State(state): State<Arc<AppState>>,
@@ -232,9 +250,20 @@ pub async fn convert_to_pdf(
 #[utoipa::path(
     get,
     path = "/api/documents/{id}/preview",
-    params(("id" = String, Path, description = "Document id")),
-    responses((status = 200, description = "Temporary PDF preview"), (status = 401, description = "Token requerido")),
-    tag = "Documents"
+    params(
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
+    ),
+    responses(
+        (status = 200, description = "PDF temporal de previsualización. Resuelve las etiquetas del contenido antes de convertir."),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Documento no encontrado"),
+        (status = 502, description = "Error del servicio de conversión")
+    ),
+    tag = "Documents",
+    summary = "Previsualizar documento",
+    description = "Genera un PDF temporal del documento para la previsualización en el frontend. \
+        Antes de convertir, resuelve las etiquetas `{{ clave }}` por sus valores reales. \
+        Requiere ser propietario o tener acceso compartido."
 )]
 pub async fn preview(
     State(state): State<Arc<AppState>>,
@@ -281,13 +310,17 @@ fn is_convertible(doc: &crate::models::Document) -> bool {
     get,
     path = "/api/documents/{id}/pdf",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "PDF bytes"),
-        (status = 404, description = "PDF not found")
+        (status = 200, description = "Bytes del PDF ya convertido."),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "PDF no encontrado (primero debe convertirse el documento)")
     ),
-    tag = "Documents"
+    tag = "Documents",
+    summary = "Obtener PDF convertido",
+    description = "Devuelve el PDF guardado de un documento previamente convertido. \
+        Requiere ser propietario o tener acceso compartido."
 )]
 pub async fn get_pdf(
     State(state): State<Arc<AppState>>,

@@ -47,10 +47,12 @@ fn pdf_response(content: Vec<u8>) -> Response {
     get,
     path = "/api/templates",
     responses(
-        (status = 200, description = "Plantillas disponibles (globales)", body = [crate::dto::TemplateResponse]),
+        (status = 200, description = "Plantillas disponibles (globales).", body = [crate::dto::TemplateResponse]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Listar plantillas",
+    description = "Devuelve las plantillas de documento disponibles para todos los usuarios. Requiere autenticación."
 )]
 pub async fn list(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     if let Err(e) = user_or_401(&headers) {
@@ -68,11 +70,13 @@ pub async fn list(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Res
     path = "/api/templates",
     request_body = CreateTemplate,
     responses(
-        (status = 201, description = "Plantilla creada", body = crate::dto::TemplateResponse),
+        (status = 201, description = "Plantilla creada.", body = crate::dto::TemplateResponse),
         (status = 400, description = "Solicitud inválida"),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Crear plantilla",
+    description = "Crea una plantilla en blanco o a partir del contenido de un documento existente (`source_document_id`). Requiere autenticación."
 )]
 pub async fn create(
     State(state): State<Arc<AppState>>,
@@ -97,12 +101,16 @@ pub async fn create(
 #[utoipa::path(
     get,
     path = "/api/templates/{id}",
-    params(("id" = String, Path, description = "Template id")),
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+    ),
     responses(
-        (status = 200, description = "Plantilla", body = crate::dto::TemplateResponse),
+        (status = 200, description = "Metadatos de la plantilla.", body = crate::dto::TemplateResponse),
         (status = 404, description = "Plantilla no encontrada")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Obtener plantilla",
+    description = "Devuelve los metadatos de una plantilla por su id."
 )]
 pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     match template_service::get_by_id(&state.db, &id) {
@@ -114,15 +122,19 @@ pub async fn get(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> 
 #[utoipa::path(
     put,
     path = "/api/templates/{id}",
-    params(("id" = String, Path, description = "Template id")),
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+    ),
     request_body = RenameTemplate,
     responses(
-        (status = 200, description = "Plantilla renombrada", body = crate::dto::TemplateResponse),
+        (status = 200, description = "Plantilla renombrada.", body = crate::dto::TemplateResponse),
         (status = 400, description = "Solicitud inválida"),
         (status = 401, description = "Token requerido"),
         (status = 404, description = "Plantilla no encontrada")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Renombrar plantilla",
+    description = "Cambia el nombre de una plantilla. Requiere autenticación."
 )]
 pub async fn rename(
     State(state): State<Arc<AppState>>,
@@ -142,13 +154,17 @@ pub async fn rename(
 #[utoipa::path(
     delete,
     path = "/api/templates/{id}",
-    params(("id" = String, Path, description = "Template id")),
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+    ),
     responses(
-        (status = 200, description = "Plantilla eliminada"),
+        (status = 200, description = "Plantilla eliminada."),
         (status = 401, description = "Token requerido"),
         (status = 404, description = "Plantilla no encontrada")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Eliminar plantilla",
+    description = "Elimina la plantilla y su archivo en disco. Requiere autenticación."
 )]
 pub async fn delete(
     State(state): State<Arc<AppState>>,
@@ -167,12 +183,16 @@ pub async fn delete(
 #[utoipa::path(
     get,
     path = "/api/templates/{id}/content",
-    params(("id" = String, Path, description = "Template id")),
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+    ),
     responses(
-        (status = 200, description = "Contenido binario de la plantilla"),
+        (status = 200, description = "Contenido binario de la plantilla."),
         (status = 404, description = "Plantilla no encontrada")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Obtener contenido de plantilla",
+    description = "Devuelve el contenido binario de la plantilla. Lo usan los editores y el convertidor."
 )]
 pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let template = match template_service::get_by_id(&state.db, &id) {
@@ -189,14 +209,20 @@ pub async fn content(State(state): State<Arc<AppState>>, Path(id): Path<String>)
 #[utoipa::path(
     get,
     path = "/api/templates/{id}/preview",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "PDF temporal de la plantilla"),
-        (status = 401, description = "Token requerido"),
-        (status = 400, description = "La plantilla no es convertible"),
-        (status = 502, description = "Error de conversión")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
     ),
-    tag = "Templates"
+    responses(
+        (status = 200, description = "PDF temporal de la plantilla."),
+        (status = 400, description = "La plantilla no es convertible"),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Plantilla no encontrada"),
+        (status = 502, description = "Error del servicio de conversión")
+    ),
+    tag = "Templates",
+    summary = "Previsualizar plantilla",
+    description = "Genera un PDF temporal de la plantilla para la previsualización en el frontend. \
+        Requiere autenticación."
 )]
 pub async fn preview(
     State(state): State<Arc<AppState>>,
@@ -233,13 +259,17 @@ pub async fn preview(
 #[utoipa::path(
     get,
     path = "/api/onlyoffice/config/template/{id}",
-    params(("id" = String, Path, description = "Template id")),
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
+    ),
     responses(
-        (status = 200, description = "Configuración de ONLYOFFICE para la plantilla", body = crate::dto::OnlyOfficeConfig),
+        (status = 200, description = "Configuración de ONLYOFFICE para abrir la plantilla.", body = crate::dto::OnlyOfficeConfig),
         (status = 401, description = "Token requerido"),
         (status = 404, description = "Plantilla no encontrada")
     ),
-    tag = "Templates"
+    tag = "Templates",
+    summary = "Obtener configuración de ONLYOFFICE (plantilla)",
+    description = "Genera la configuración para abrir una plantilla en el editor de ONLYOFFICE. Requiere autenticación."
 )]
 pub async fn config(
     State(state): State<Arc<AppState>>,
@@ -278,11 +308,16 @@ pub async fn config(
 #[utoipa::path(
     post,
     path = "/callback/template/{id}",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "Callback aceptado")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
     ),
-    tag = "Templates"
+    request_body(content = serde_json::Value, content_type = "application/json"),
+    responses(
+        (status = 200, description = "Callback aceptado. Devuelve `{\"error\": 0}`.")
+    ),
+    tag = "Templates",
+    summary = "Callback de guardado de plantilla",
+    description = "Recibe la notificación de ONLYOFFICE al guardar/cerrar la plantilla y descarga el contenido actualizado."
 )]
 pub async fn callback(
     State(state): State<Arc<AppState>>,

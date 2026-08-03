@@ -12,10 +12,13 @@ use crate::repos::user_repo;
     path = "/api/auth/login",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Authenticated", body = crate::dto::AuthResponse),
+        (status = 200, description = "Autenticación exitosa. Devuelve el token JWT y los datos del usuario.", body = crate::dto::AuthResponse),
         (status = 401, description = "Credenciales inválidas")
     ),
-    tag = "Auth"
+    tag = "Auth",
+    summary = "Iniciar sesión",
+    description = "Autentica al usuario con nombre de usuario y contraseña, y devuelve un token JWT de acceso. \
+        Use el token como `Authorization: Bearer <token>` en el resto de endpoints."
 )]
 pub async fn login(
     State(state): State<Arc<AppState>>,
@@ -30,10 +33,12 @@ pub async fn login(
     get,
     path = "/api/users",
     responses(
-        (status = 200, description = "Listado de usuarios activos (solo lectura)", body = [crate::dto::UserSearchResult]),
+        (status = 200, description = "Listado de usuarios activos (solo lectura).", body = [crate::dto::UserSearchResult]),
         (status = 401, description = "Token requerido")
     ),
-    tag = "Auth"
+    tag = "Auth",
+    summary = "Listar usuarios",
+    description = "Devuelve todos los usuarios activos del sistema. Requiere autenticación."
 )]
 pub async fn list_users(
     State(state): State<Arc<AppState>>,

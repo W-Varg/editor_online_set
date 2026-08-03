@@ -19,14 +19,17 @@ fn user_or_401(headers: &HeaderMap) -> Result<crate::dto::JwtClaims, Response> {
     get,
     path = "/api/onlyoffice/config/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "OnlyOffice configuration", body = crate::dto::OnlyOfficeConfig),
+        (status = 200, description = "Configuración para inicializar el editor de ONLYOFFICE.", body = crate::dto::OnlyOfficeConfig),
         (status = 401, description = "Token requerido"),
-        (status = 404, description = "Document not found")
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "OnlyOffice"
+    tag = "OnlyOffice",
+    summary = "Obtener configuración de ONLYOFFICE",
+    description = "Genera la configuración (documento, editorConfig, plugins y token JWT) para abrir un documento \
+        en el editor de ONLYOFFICE. Requiere autenticación."
 )]
 pub async fn config(
     State(state): State<Arc<AppState>>,
@@ -58,12 +61,15 @@ pub async fn config(
     post,
     path = "/callback/onlyoffice/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
+    request_body(content = serde_json::Value, content_type = "application/json"),
     responses(
-        (status = 200, description = "Callback accepted")
+        (status = 200, description = "Callback aceptado. Devuelve `{\"error\": 0}`.")
     ),
-    tag = "OnlyOffice"
+    tag = "OnlyOffice",
+    summary = "Callback de guardado de ONLYOFFICE",
+    description = "Recibe la notificación de ONLYOFFICE al guardar/cerrar el documento y descarga el contenido actualizado."
 )]
 pub async fn callback(
     State(state): State<Arc<AppState>>,

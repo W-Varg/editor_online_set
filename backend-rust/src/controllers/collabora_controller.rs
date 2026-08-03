@@ -32,14 +32,16 @@ async fn wopi_verify(
     get,
     path = "/api/collabora/session/{id}",
     params(
-        ("id" = String, Path, description = "Document id")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789")
     ),
     responses(
-        (status = 200, description = "Collabora session", body = crate::dto::CollaboraSession),
+        (status = 200, description = "Sesión de edición de Collabora para incrustar en un iframe.", body = crate::dto::CollaboraSession),
         (status = 401, description = "Token requerido"),
-        (status = 404, description = "Document not found")
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "Collabora"
+    tag = "Collabora",
+    summary = "Crear sesión de Collabora",
+    description = "Genera la URL del iframe y el token de acceso para editar un documento con Collabora. Requiere autenticación."
 )]
 pub async fn session(
     State(state): State<Arc<AppState>>,
@@ -59,15 +61,17 @@ pub async fn session(
     get,
     path = "/wopi/files/{id}",
     params(
-        ("id" = String, Path, description = "Document id"),
-        ("access_token" = Option<String>, Query, description = "WOPI access token")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
     responses(
-        (status = 200, description = "WOPI file info", body = CheckFileInfo),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 404, description = "Document not found")
+        (status = 200, description = "Metadatos WOPI del documento (CheckFileInfo).", body = CheckFileInfo),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "Collabora"
+    tag = "Collabora",
+    summary = "WOPI CheckFileInfo (documentos)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para consultar los metadatos de un documento."
 )]
 pub async fn check_file_info(
     State(state): State<Arc<AppState>>,
@@ -100,15 +104,17 @@ pub async fn check_file_info(
     get,
     path = "/wopi/files/{id}/contents",
     params(
-        ("id" = String, Path, description = "Document id"),
-        ("access_token" = Option<String>, Query, description = "WOPI access token")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
     responses(
-        (status = 200, description = "Document bytes"),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 404, description = "Document not found")
+        (status = 200, description = "Contenido binario del documento."),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 404, description = "Documento no encontrado")
     ),
-    tag = "Collabora"
+    tag = "Collabora",
+    summary = "WOPI GetFile (documentos)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para leer el contenido de un documento."
 )]
 pub async fn get_file(
     State(state): State<Arc<AppState>>,
@@ -130,16 +136,18 @@ pub async fn get_file(
     post,
     path = "/wopi/files/{id}",
     params(
-        ("id" = String, Path, description = "Document id"),
-        ("access_token" = Option<String>, Query, description = "WOPI access token")
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
     responses(
-        (status = 200, description = "WOPI operation result"),
-        (status = 400, description = "Invalid WOPI request"),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 409, description = "Lock conflict")
+        (status = 200, description = "Resultado de la operación WOPI (lock/unlock)."),
+        (status = 400, description = "Solicitud WOPI inválida"),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 409, description = "Conflicto de bloqueo (X-WOPI-Lock no coincide)")
     ),
-    tag = "Collabora"
+    tag = "Collabora",
+    summary = "WOPI operaciones de bloqueo (documentos)",
+    description = "Endpoint interno del protocolo WOPI para gestionar los bloqueos (LOCK, UNLOCK, REFRESH_LOCK, GET_LOCK) de un documento."
 )]
 pub async fn file_ops(
     State(state): State<Arc<AppState>>,
@@ -178,6 +186,24 @@ pub async fn file_ops(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/wopi/files/{id}/contents",
+    params(
+        ("id" = String, Path, description = "Identificador único del documento (UUID).", example = "0a1b2c3d-4e5f-6789-abcd-ef0123456789"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    ),
+    request_body(content = String, content_type = "application/octet-stream"),
+    responses(
+        (status = 200, description = "Documento guardado. Devuelve `X-WOPI-ItemVersion`."),
+        (status = 400, description = "Operación WOPI inválida"),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 409, description = "Conflicto de bloqueo (X-WOPI-Lock no coincide)")
+    ),
+    tag = "Collabora",
+    summary = "WOPI PutFile (documentos)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para guardar el contenido editado de un documento."
+)]
 pub async fn put_file(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -223,13 +249,17 @@ fn template_lock_key(id: &str) -> String {
 #[utoipa::path(
     get,
     path = "/api/collabora/config/template/{id}",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "Collabora template session", body = crate::dto::CollaboraSession),
-        (status = 401, description = "Token requerido"),
-        (status = 404, description = "Template not found")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a")
     ),
-    tag = "Collabora"
+    responses(
+        (status = 200, description = "Sesión de edición de Collabora para la plantilla.", body = crate::dto::CollaboraSession),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Plantilla no encontrada")
+    ),
+    tag = "Collabora",
+    summary = "Crear sesión de Collabora (plantilla)",
+    description = "Genera la URL del iframe y el token para editar una plantilla con Collabora. Requiere autenticación."
 )]
 pub async fn template_session(
     State(state): State<Arc<AppState>>,
@@ -252,13 +282,18 @@ pub async fn template_session(
 #[utoipa::path(
     get,
     path = "/wopi/templates/{id}",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "WOPI template info", body = CheckFileInfo),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 404, description = "Template not found")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
-    tag = "Collabora"
+    responses(
+        (status = 200, description = "Metadatos WOPI de la plantilla (CheckFileInfo).", body = CheckFileInfo),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 404, description = "Plantilla no encontrada")
+    ),
+    tag = "Collabora",
+    summary = "WOPI CheckFileInfo (plantillas)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para consultar los metadatos de una plantilla."
 )]
 pub async fn template_check_file_info(
     State(state): State<Arc<AppState>>,
@@ -290,13 +325,18 @@ pub async fn template_check_file_info(
 #[utoipa::path(
     get,
     path = "/wopi/templates/{id}/contents",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "Template bytes"),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 404, description = "Template not found")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
-    tag = "Collabora"
+    responses(
+        (status = 200, description = "Contenido binario de la plantilla."),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 404, description = "Plantilla no encontrada")
+    ),
+    tag = "Collabora",
+    summary = "WOPI GetFile (plantillas)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para leer el contenido de una plantilla."
 )]
 pub async fn template_get_file(
     State(state): State<Arc<AppState>>,
@@ -317,14 +357,19 @@ pub async fn template_get_file(
 #[utoipa::path(
     post,
     path = "/wopi/templates/{id}",
-    params(("id" = String, Path, description = "Template id")),
-    responses(
-        (status = 200, description = "WOPI operation result"),
-        (status = 400, description = "Invalid WOPI request"),
-        (status = 401, description = "Invalid or missing token"),
-        (status = 409, description = "Lock conflict")
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     ),
-    tag = "Collabora"
+    responses(
+        (status = 200, description = "Resultado de la operación WOPI (lock/unlock)."),
+        (status = 400, description = "Solicitud WOPI inválida"),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 409, description = "Conflicto de bloqueo (X-WOPI-Lock no coincide)")
+    ),
+    tag = "Collabora",
+    summary = "WOPI operaciones de bloqueo (plantillas)",
+    description = "Endpoint interno del protocolo WOPI para gestionar los bloqueos (LOCK, UNLOCK, REFRESH_LOCK, GET_LOCK) de una plantilla."
 )]
 pub async fn template_file_ops(
     State(state): State<Arc<AppState>>,
@@ -364,6 +409,24 @@ pub async fn template_file_ops(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/wopi/templates/{id}/contents",
+    params(
+        ("id" = String, Path, description = "Identificador único de la plantilla (UUID).", example = "7f8e9d0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a"),
+        ("access_token" = Option<String>, Query, description = "Token WOPI emitido al crear la sesión.", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    ),
+    request_body(content = String, content_type = "application/octet-stream"),
+    responses(
+        (status = 200, description = "Plantilla guardada. Devuelve `X-WOPI-ItemVersion`."),
+        (status = 400, description = "Operación WOPI inválida"),
+        (status = 401, description = "Token inválido o ausente"),
+        (status = 409, description = "Conflicto de bloqueo (X-WOPI-Lock no coincide)")
+    ),
+    tag = "Collabora",
+    summary = "WOPI PutFile (plantillas)",
+    description = "Endpoint interno del protocolo WOPI usado por Collabora para guardar el contenido editado de una plantilla."
+)]
 pub async fn template_put_file(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
