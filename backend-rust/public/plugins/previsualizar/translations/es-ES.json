@@ -1,0 +1,12 @@
+{
+  "Preview": "Vista previa",
+  "Generate preview": "Previsualizar",
+  "Generates a PDF of the current document with the {{key}} tags already resolved.": "Genera un PDF del documento actual con las etiquetas {{key}} ya resueltas.",
+  "Close": "Cerrar",
+  "Generating preview...": "Generando previsualización...",
+  "Could not generate the preview.": "No se pudo generar la previsualización.",
+  "The preview is empty.": "La previsualización está vacía.",
+  "The previous save failed: ": "El guardado previo falló: ",
+  "Could not get the document identifier.": "No se pudo obtener el identificador del documento.",
+  "Document preview": "Vista previa del documento"
+}

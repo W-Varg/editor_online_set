@@ -73,7 +73,7 @@
 
   function openPreviewWindow() {
     if (!state.docId) {
-      showStatus('No se pudo obtener el identificador del documento.', true)
+      showStatus(window.Asc.plugin.tr('Could not get the document identifier.'), true)
       return
     }
 
@@ -83,12 +83,12 @@
 
     var variation = {
       url: location.href.replace(file, 'preview.html'),
-      description: window.Asc.plugin.tr('Vista previa del documento'),
+      description: window.Asc.plugin.tr('Document preview'),
       isVisual: true,
       isModal: true,
       isViewer: true,
       EditorsSupport: ['word', 'cell'],
-      buttons: [{ text: 'Cerrar', primary: false }],
+      buttons: [{ text: 'Close', primary: false }],
       size: [900, 640]
     }
 
@@ -109,6 +109,18 @@
   }
 
   // ---- Inicialización ----
+
+  // Aplica las traducciones cargadas por el editor (langs.json / es-ES.json).
+  window.Asc.plugin.onTranslate = function () {
+    var label = document.getElementById('label-title')
+    if (label) label.innerHTML = window.Asc.plugin.tr('Preview')
+    var hint = document.getElementById('preview-hint')
+    if (hint) hint.innerHTML = window.Asc.plugin.tr('Generates a PDF of the current document with the {{key}} tags already resolved.')
+    var btnText = document.getElementById('btn-text')
+    if (btnText) btnText.innerHTML = window.Asc.plugin.tr('Generate preview')
+    var close = document.getElementById('btn-cerrar')
+    if (close) close.innerHTML = window.Asc.plugin.tr('Close')
+  }
 
   window.Asc.plugin.init = function () {
     readOptions()

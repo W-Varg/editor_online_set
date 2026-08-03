@@ -27,7 +27,7 @@
 
   function showError(message) {
     var error = document.getElementById('preview-error')
-    error.textContent = message || 'No se pudo generar la previsualización.'
+    error.textContent = message || window.Asc.plugin.tr('Could not generate the preview.')
     error.style.display = 'block'
     document.getElementById('preview-loading').style.display = 'none'
     document.getElementById('preview-frame').style.display = 'none'
@@ -73,7 +73,7 @@
       })
       .then(function (blob) {
         if (!blob || !blob.size) {
-          throw new Error('La previsualización está vacía.')
+          throw new Error(window.Asc.plugin.tr('The preview is empty.'))
         }
         showPdf(blob)
       })
@@ -94,11 +94,17 @@
     }).then(function (response) {
       if (!response.ok) {
         return response.text().then(function (text) {
-          throw new Error('El guardado previo falló: ' + (text || 'Error HTTP ' + response.status))
+          throw new Error(window.Asc.plugin.tr('The previous save failed: ') + (text || 'Error HTTP ' + response.status))
         })
       }
       return response.json()
     })
+  }
+
+  // Aplica las traducciones cargadas por el editor (langs.json / es-ES.json).
+  window.Asc.plugin.onTranslate = function () {
+    var loading = document.getElementById('loading-text')
+    if (loading) loading.innerHTML = window.Asc.plugin.tr('Generating preview...')
   }
 
   // Avisa al plugin padre que el modal está listo para recibir los datos.
