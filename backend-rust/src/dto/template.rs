@@ -6,6 +6,8 @@ pub struct CreateTemplate {
     pub name: String,
     pub ext: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub editor: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_document_id: Option<String>,
 }
 

@@ -96,7 +96,18 @@ export async function listTemplates() {
   return res.json()
 }
 
-export async function createTemplate(data: { name: string; ext: string; source_document_id?: string }) {
+export async function getTemplate(id: string) {
+  const res = await fetch(`${API_BASE}/api/templates/${id}`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to fetch template')
+  return res.json()
+}
+
+export async function createTemplate(data: {
+  name: string
+  ext: string
+  editor?: string
+  source_document_id?: string
+}) {
   const res = await fetch(`${API_BASE}/api/templates`, {
     method: 'POST',
     headers: headers(),
@@ -144,6 +155,20 @@ export async function getTemplateOnlyOfficeConfig(id: string) {
     headers: headers(),
   })
   if (!res.ok) throw new Error('Failed to get template OnlyOffice config')
+  return res.json()
+}
+
+export async function getTemplateCollaboraSession(id: string) {
+  const res = await fetch(`${API_BASE}/api/collabora/config/template/${id}`, {
+    headers: headers(),
+  })
+  if (!res.ok) throw new Error('Failed to get template Collabora session')
+  return res.json()
+}
+
+export async function listTags() {
+  const res = await fetch(`${API_BASE}/api/tags`, { headers: headers() })
+  if (!res.ok) throw new Error('Failed to fetch tags')
   return res.json()
 }
 

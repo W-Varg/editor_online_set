@@ -8,7 +8,7 @@ use axum::body::Bytes;
 use crate::AppState;
 use crate::dto::{CheckFileInfo, TokenQuery, JwtClaims};
 use crate::helpers::{config, jwt, wopi};
-use crate::repos::document_repo;
+use crate::repos::{document_repo, template_repo};
 
 fn user_or_401(headers: &HeaderMap) -> Result<JwtClaims, Response> {
     jwt::extract_user(headers, &config::jwt_secret())
@@ -203,6 +203,196 @@ pub async fn put_file(
     let doc = document_repo::get_by_id(&state.db, &id).unwrap();
     document_repo::write_file(&state.db_path, &doc, &body).unwrap_or_default();
     document_repo::update_content(&state.db, &id, body.len() as u64);
+
+    let mut response = StatusCode::OK.into_response();
+    response.headers_mut().insert("X-WOPI-ItemVersion",
+        HeaderValue::from_str(&chrono::Utc::now().timestamp().to_string()).unwrap_or_else(|_| HeaderValue::from_static("0")));
+    response
+}
+
+// ---------------------------------------------------------------------------
+// WOPI para plantillas (editar plantillas con Collabora).
+// Los locks se almacenan con la clave `tpl:{id}` para no chocar con los de los
+// documentos, que usan el id a secas.
+// ---------------------------------------------------------------------------
+
+fn template_lock_key(id: &str) -> String {
+    format!("tpl:{}", id)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/collabora/config/template/{id}",
+    params(("id" = String, Path, description = "Template id")),
+    responses(
+        (status = 200, description = "Collabora template session", body = crate::dto::CollaboraSession),
+        (status = 401, description = "Token requerido"),
+        (status = 404, description = "Template not found")
+    ),
+    tag = "Collabora"
+)]
+pub async fn template_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let user = match user_or_401(&headers) { Ok(u) => u, Err(e) => return e };
+    match crate::services::collabora_service::create_template_session(
+        &state.db,
+        &id,
+        &user.sub,
+        &user.name,
+        &state.collab_browser_prefix,
+    ) {
+        Ok(session) => Json(session).into_response(),
+        Err(e) => (StatusCode::NOT_FOUND, e).into_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/wopi/templates/{id}",
+    params(("id" = String, Path, description = "Template id")),
+    responses(
+        (status = 200, description = "WOPI template info", body = CheckFileInfo),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 404, description = "Template not found")
+    ),
+    tag = "Collabora"
+)]
+pub async fn template_check_file_info(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Query(query): Query<TokenQuery>,
+) -> Response {
+    let claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    let template = match template_repo::get_by_id(&state.db, &id) {
+        Some(t) => t,
+        None => return (StatusCode::NOT_FOUND, "Not found").into_response(),
+    };
+    Json(CheckFileInfo {
+        base_file_name: format!("{}.{}", template.name, template.ext),
+        size: template.size,
+        user_id: claims.sub,
+        user_friendly_name: claims.name,
+        version: "1.0".to_string(),
+        last_modified_time: template.updated_at,
+        user_can_write: true,
+        user_can_not_write_relative: false,
+        breadcrumb_doc_name: template.name,
+        supports_locks: true,
+        supports_get_lock: true,
+        supports_update: true,
+        supports_extended_lock_length: false,
+    }).into_response()
+}
+
+#[utoipa::path(
+    get,
+    path = "/wopi/templates/{id}/contents",
+    params(("id" = String, Path, description = "Template id")),
+    responses(
+        (status = 200, description = "Template bytes"),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 404, description = "Template not found")
+    ),
+    tag = "Collabora"
+)]
+pub async fn template_get_file(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Query(query): Query<TokenQuery>,
+) -> Response {
+    let _claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    match template_repo::read_file(&state.db_path, &id) {
+        Some(content) => {
+            let mime = template_repo::get_by_id(&state.db, &id)
+                .map(|t| t.mime).unwrap_or_else(|| "application/octet-stream".to_string());
+            ([(axum::http::header::CONTENT_TYPE, mime.as_str())], content).into_response()
+        }
+        None => (StatusCode::NOT_FOUND, "Not found").into_response(),
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/wopi/templates/{id}",
+    params(("id" = String, Path, description = "Template id")),
+    responses(
+        (status = 200, description = "WOPI operation result"),
+        (status = 400, description = "Invalid WOPI request"),
+        (status = 401, description = "Invalid or missing token"),
+        (status = 409, description = "Lock conflict")
+    ),
+    tag = "Collabora"
+)]
+pub async fn template_file_ops(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<TokenQuery>,
+) -> Response {
+    let _claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    let op = match wopi::wopi_override(&headers) {
+        Some(op) => op,
+        None => return (StatusCode::BAD_REQUEST, "Missing X-WOPI-Override").into_response(),
+    };
+    let lock_val = wopi::wopi_lock_value(&headers);
+    let lock_key = template_lock_key(&id);
+
+    match op.as_str() {
+        "LOCK" | "REFRESH_LOCK" => {
+            let requested = match &lock_val { Some(l) if !l.is_empty() => l.clone(), _ => return (StatusCode::BAD_REQUEST, "Missing X-WOPI-Lock").into_response() };
+            match wopi::current_lock(&state.wopi_locks, &lock_key) {
+                Some(existing) if existing != requested => wopi::conflict_response(Some(existing)),
+                _ => { wopi::set_lock(&state.wopi_locks, &lock_key, requested.clone()); wopi::lock_response(&requested) }
+            }
+        }
+        "UNLOCK" => {
+            let requested = match &lock_val { Some(l) if !l.is_empty() => l.clone(), _ => return (StatusCode::BAD_REQUEST, "Missing X-WOPI-Lock").into_response() };
+            match wopi::current_lock(&state.wopi_locks, &lock_key) {
+                Some(existing) if existing == requested => { wopi::clear_lock(&state.wopi_locks, &lock_key); StatusCode::OK.into_response() }
+                Some(existing) => wopi::conflict_response(Some(existing)),
+                None => StatusCode::OK.into_response(),
+            }
+        }
+        "GET_LOCK" => match wopi::current_lock(&state.wopi_locks, &lock_key) {
+            Some(lock) => wopi::lock_response(&lock),
+            None => StatusCode::OK.into_response(),
+        },
+        _ => (StatusCode::BAD_REQUEST, format!("Unsupported WOPI operation: {}", op)).into_response(),
+    }
+}
+
+pub async fn template_put_file(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<TokenQuery>,
+    body: Bytes,
+) -> Response {
+    let _claims = match wopi_verify(&state, &query, &id).await { Ok(c) => c, Err(e) => return e };
+    match wopi::wopi_override(&headers).as_deref() {
+        Some("PUT") => {}
+        Some(other) => return (StatusCode::BAD_REQUEST, format!("Unsupported WOPI operation: {}", other)).into_response(),
+        None => return (StatusCode::BAD_REQUEST, "Missing X-WOPI-Override").into_response(),
+    }
+
+    let lock_key = template_lock_key(&id);
+    if let Some(current) = wopi::current_lock(&state.wopi_locks, &lock_key) {
+        match wopi::wopi_lock_value(&headers) {
+            Some(requested) if requested == current => {}
+            Some(_) => return wopi::conflict_response(Some(current)),
+            None => return wopi::conflict_response(Some(current)),
+        }
+    }
+
+    let template = match template_repo::get_by_id(&state.db, &id) {
+        Some(t) => t,
+        None => return (StatusCode::NOT_FOUND, "Template not found").into_response(),
+    };
+    template_repo::write_file(&state.db_path, &template, &body).unwrap_or_default();
+    template_repo::update_size(&state.db, &id, body.len() as u64);
 
     let mut response = StatusCode::OK.into_response();
     response.headers_mut().insert("X-WOPI-ItemVersion",

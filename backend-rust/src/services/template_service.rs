@@ -22,6 +22,13 @@ pub fn create(
     let mime = ext_to_mime(&ext).to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
+    // Editor de plantilla: onlyoffice por defecto, pero puede crearse con
+    // Collabora para editar plantillas en ese editor (WOPI de plantillas).
+    let editor = req.editor.as_deref().unwrap_or("onlyoffice").to_ascii_lowercase();
+    if !matches!(editor.as_str(), "onlyoffice" | "collabora") {
+        return Err("Editor no soportado".to_string());
+    }
+
     // Si se indica un documento origen, la plantilla copia su contenido
     // (con etiquetas, encabezados/pies y todo lo editado). En caso contrario
     // se parte de un archivo en blanco del tipo indicado.
@@ -41,7 +48,7 @@ pub fn create(
         name: req.name.clone(),
         ext,
         mime,
-        editor: "onlyoffice".to_string(),
+        editor,
         size: content.len() as u64,
         owner_id: owner_id.to_string(),
         created_at: now.clone(),

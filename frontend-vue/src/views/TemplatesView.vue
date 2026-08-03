@@ -12,6 +12,7 @@ const error = ref('')
 const toast = ref('')
 const formName = ref('')
 const formExt = ref<'docx' | 'xlsx'>('docx')
+const formEditor = ref<'onlyoffice' | 'collabora'>('onlyoffice')
 const creating = ref(false)
 const previewId = ref<string | null>(null)
 const renaming = ref<Template | null>(null)
@@ -40,7 +41,11 @@ async function handleCreate() {
   creating.value = true
   error.value = ''
   try {
-    await createTemplate({ name: formName.value.trim(), ext: formExt.value })
+    await createTemplate({
+      name: formName.value.trim(),
+      ext: formExt.value,
+      editor: formEditor.value,
+    })
     formName.value = ''
     await load()
     showToast('Plantilla creada correctamente')
@@ -119,6 +124,13 @@ function formatSize(bytes: number): string {
               <option value="xlsx">Excel (.xlsx)</option>
             </select>
           </div>
+          <div class="field">
+            <label>Editor</label>
+            <select v-model="formEditor">
+              <option value="onlyoffice">ONLYOFFICE</option>
+              <option value="collabora">Collabora Online</option>
+            </select>
+          </div>
           <div class="field action">
             <button type="submit" :disabled="creating || !formName.trim()">
               {{ creating ? 'Creando...' : 'Crear plantilla' }}
@@ -144,6 +156,7 @@ function formatSize(bytes: number): string {
           <tr>
             <th>Nombre</th>
             <th>Tipo</th>
+            <th>Editor</th>
             <th>Propietario</th>
             <th>Tamaño</th>
             <th>Actualizado</th>
@@ -155,6 +168,11 @@ function formatSize(bytes: number): string {
             <td class="tpl-name">{{ t.name }}.{{ t.ext }}</td>
             <td>
               <span class="badge" :class="t.ext">{{ t.ext === 'docx' ? 'WORD' : 'EXCEL' }}</span>
+            </td>
+            <td>
+              <span class="badge editor" :class="t.editor">
+                {{ t.editor === 'collabora' ? 'COLLABORA' : 'ONLYOFFICE' }}
+              </span>
             </td>
             <td class="owner-cell">{{ t.owner_name }}</td>
             <td>{{ formatSize(t.size) }}</td>
@@ -335,6 +353,16 @@ th {
 .badge.xlsx {
   background: #ecfdf5;
   color: #047857;
+}
+
+.badge.editor.collabora {
+  background: #fdf2f8;
+  color: #be185d;
+}
+
+.badge.editor.onlyoffice {
+  background: #f5f3ff;
+  color: #6d28d9;
 }
 
 .owner-cell,

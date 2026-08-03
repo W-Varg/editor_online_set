@@ -51,7 +51,14 @@ export interface Template {
 export interface CreateTemplatePayload {
   name: string
   ext: string
+  editor?: string
   source_document_id?: string
+}
+
+export interface Tag {
+  key: string
+  label: string
+  description: string
 }
 
 export interface CollaboraSession {

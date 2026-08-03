@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getCollaboraSession,
+  getDocument,
   searchUsers,
   shareDocument,
   listShares,
@@ -10,9 +11,13 @@ import {
 } from '@/services/api'
 import type { ShareInfo, UserSearchResult } from '@/services/types'
 import { useTheme } from '@/composables/useTheme'
+import { useCollaboraTags } from '@/composables/useCollaboraTags'
+import { useAuthStore } from '@/stores/auth'
+import TagsModal from '@/components/TagsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const loading = ref(true)
 const error = ref('')
 
@@ -24,6 +29,13 @@ const selectedUserId = ref<string | null>(null)
 const shareError = ref('')
 const { isDark } = useTheme()
 const rawIframeUrl = ref('')
+const collaboraIframe = ref<HTMLIFrameElement | null>(null)
+const isOwner = ref(true)
+const showTagsModal = ref(false)
+const toast = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | undefined
+
+const { insertTag } = useCollaboraTags(collaboraIframe)
 
 const iframeUrl = computed(() => {
   if (!rawIframeUrl.value) return ''
@@ -36,13 +48,18 @@ const docId = route.params.id as string
 
 onMounted(async () => {
   try {
-    const session = await getCollaboraSession(docId)
+    const [session, doc] = await Promise.all([getCollaboraSession(docId), getDocument(docId)])
     rawIframeUrl.value = session.iframe_url
+    isOwner.value = doc.owner_id === auth.user?.id
   } catch (e) {
     error.value = String(e)
   } finally {
     loading.value = false
   }
+})
+
+onBeforeUnmount(() => {
+  if (toastTimer) clearTimeout(toastTimer)
 })
 
 async function openShareModal() {
@@ -61,7 +78,7 @@ function closeShareModal() {
 async function loadShares() {
   try {
     shares.value = await listShares(docId)
-  } catch (e) {
+  } catch {
     shareError.value = 'Error al cargar compartidos'
   }
 }
@@ -74,7 +91,7 @@ async function onSearchInput() {
   }
   try {
     shareResults.value = await searchUsers(shareSearchQuery.value)
-  } catch (e) {
+  } catch {
     shareResults.value = []
   }
 }
@@ -98,9 +115,29 @@ async function handleRemoveShare(userId: string) {
   try {
     await removeShare(docId, userId)
     await loadShares()
-  } catch (e) {
+  } catch {
     shareError.value = 'Error al quitar acceso'
   }
+}
+
+async function onSelectTag(key: string) {
+  const ok = await insertTag(key)
+  if (!ok) {
+    try {
+      await navigator.clipboard.writeText(`{{${key}}}`)
+      showToast(`No se pudo insertar en el cursor. Etiqueta {{${key}}} copiada al portapapeles.`)
+    } catch {
+      showToast('No se pudo insertar ni copiar la etiqueta.')
+    }
+  }
+}
+
+function showToast(message: string) {
+  toast.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toast.value = ''
+  }, 4000)
 }
 </script>
 
@@ -108,17 +145,29 @@ async function handleRemoveShare(userId: string) {
   <div class="editor-collabora">
     <div class="toolbar">
       <button class="btn-back" @click="router.push('/')">← Volver</button>
-      <button class="btn-share" @click="openShareModal">Compartir</button>
+      <button v-if="isOwner" class="btn-share" @click="openShareModal">Compartir</button>
+      <button class="btn-tags" @click="showTagsModal = true">Etiquetas</button>
+      <button class="btn-preview" @click="router.push(`/preview/${docId}`)">Previsualizar</button>
     </div>
     <div v-if="loading" class="status">Iniciando sesión de Collabora...</div>
     <div v-if="error" class="status error">{{ error }}</div>
     <iframe
       v-if="iframeUrl"
+      ref="collaboraIframe"
       :src="iframeUrl"
       class="editor-frame"
       allow="clipboard-read; clipboard-write"
       sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals allow-top-navigation-by-user-activation"
     />
+
+    <TagsModal
+      :show="showTagsModal"
+      title="Insertar etiqueta en el documento"
+      @close="showTagsModal = false"
+      @select="onSelectTag"
+    />
+
+    <div v-if="toast" class="success-toast" role="status">{{ toast }}</div>
 
     <!-- Share Modal -->
     <Teleport to="body">
@@ -217,6 +266,25 @@ async function handleRemoveShare(userId: string) {
   transition: opacity 0.15s;
 }
 .btn-share:hover {
+  opacity: 0.85;
+}
+.btn-tags,
+.btn-preview {
+  padding: 0.4rem 0.85rem;
+  background: #7c3aed;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: white;
+  transition: opacity 0.15s;
+}
+.btn-preview {
+  background: #475569;
+}
+.btn-tags:hover,
+.btn-preview:hover {
   opacity: 0.85;
 }
 .status {
@@ -389,5 +457,19 @@ async function handleRemoveShare(userId: string) {
   color: #dc2626;
   border-radius: 4px;
   font-size: 0.85rem;
+}
+
+.success-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 20;
+  padding: 0.85rem 1rem;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  font-size: 0.9rem;
 }
 </style>
